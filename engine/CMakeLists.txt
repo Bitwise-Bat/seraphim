@@ -15,9 +15,10 @@ seraphim_embed_shader(sprite render/shaders/sprite.wgsl)
 add_executable(seraphim main.cpp asset/asset_manager.cpp asset/asset_sources.cpp asset/image_loader.cpp
     core/fixed_timestep.cpp core/log.cpp
     platform/input.cpp platform/window.cpp render/camera2d.cpp render/renderer.cpp render/sprite_renderer.cpp
-    render/texture2d.cpp)
+    render/texture2d.cpp scene/scene.cpp scene/sprite_system.cpp)
+find_package(EnTT CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
-target_link_libraries(seraphim PRIVATE glm::glm-header-only)
+target_link_libraries(seraphim PRIVATE EnTT::EnTT glm::glm-header-only)
 target_include_directories(seraphim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_compile_options(seraphim PRIVATE -sUSE_SDL=3 --use-port=emdawnwebgpu)
 set_target_properties(seraphim PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

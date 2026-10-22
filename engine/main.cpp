@@ -6,6 +6,8 @@
 #include "platform/input.hpp"
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
+#include "scene/scene.hpp"
+#include "scene/sprite_system.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -32,6 +34,8 @@ struct app_state
     // Created once the renderer has a device, since uploading textures needs one.
     std::optional<seraphim::asset::asset_manager> assets;
     seraphim::render::camera2d camera;
+    seraphim::scene::scene scene;
+    seraphim::scene::sprite_system sprites;
 };
 
 // SDL owns the app state, but the host page reaches the engine through embind, so the running app is published here.
@@ -105,6 +109,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     state.assets->update();
     state.renderer.begin(state.camera);
+    state.sprites.draw(state.scene, *state.assets, state.renderer);
     state.renderer.end(*state.assets);
     return SDL_APP_CONTINUE;
 }
