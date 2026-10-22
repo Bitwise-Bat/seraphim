@@ -1,10 +1,10 @@
-import { use_project_store } from './project/project_store'
+import { useProjectStore } from './project/project_store'
 
 export function ProjectPicker() {
-  const state = use_project_store((store) => store.state)
-  const open = use_project_store((store) => store.open)
-  const create = use_project_store((store) => store.create)
-  const reopen = use_project_store((store) => store.reopen)
+  const state = useProjectStore((store) => store.state)
+  const open = useProjectStore((store) => store.open)
+  const create = useProjectStore((store) => store.create)
+  const reopen = useProjectStore((store) => store.reopen)
 
   if (state.status === 'unsupported') {
     return (

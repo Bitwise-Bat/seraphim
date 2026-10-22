@@ -35,7 +35,7 @@ async function pick_directory(): Promise<FileSystemDirectoryHandle> {
   return window.showDirectoryPicker({ id: 'seraphim-project', mode: 'readwrite' })
 }
 
-export const use_project_store = create<ProjectStore>()((set, get) => {
+export const useProjectStore = create<ProjectStore>()((set, get) => {
   async function load(directory: FileSystemDirectoryHandle, read: typeof read_project): Promise<void> {
     try {
       const manifest = await read(directory)

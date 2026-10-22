@@ -25,7 +25,7 @@ function error_message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-export const use_asset_store = create<AssetStore>()((set, get) => {
+export const useAssetStore = create<AssetStore>()((set, get) => {
   // Scans and imports write .meta files, so two running at once could each create metadata for the same asset.
   let pending: Promise<void> = Promise.resolve()
   function serialized(task: () => Promise<void>): Promise<void> {

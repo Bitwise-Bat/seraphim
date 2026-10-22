@@ -2,7 +2,7 @@ import { useCallback, useState, type DragEvent, type MouseEvent, type ReactNode 
 import { AssetThumbnail } from './AssetThumbnail'
 import { ContextMenu } from './ContextMenu'
 import { find_folder, type AssetEntry } from './project/assets'
-import { use_asset_store } from './project/asset_store'
+import { useAssetStore } from './project/asset_store'
 import { RenameInput } from './RenameInput'
 
 function dropped_files(event: DragEvent): File[] {
@@ -50,13 +50,13 @@ function AssetTile({ entry, thumbnail, title, renaming, on_open, on_context_menu
 }
 
 export function AssetBrowser() {
-  const root = use_asset_store((store) => store.root)
-  const current_path = use_asset_store((store) => store.current_path)
-  const error = use_asset_store((store) => store.error)
-  const navigate = use_asset_store((store) => store.navigate)
-  const import_into_current = use_asset_store((store) => store.import_into_current)
-  const rename = use_asset_store((store) => store.rename)
-  const remove = use_asset_store((store) => store.remove)
+  const root = useAssetStore((store) => store.root)
+  const current_path = useAssetStore((store) => store.current_path)
+  const error = useAssetStore((store) => store.error)
+  const navigate = useAssetStore((store) => store.navigate)
+  const import_into_current = useAssetStore((store) => store.import_into_current)
+  const rename = useAssetStore((store) => store.rename)
+  const remove = useAssetStore((store) => store.remove)
   const [dragging, set_dragging] = useState(false)
   const [menu, set_menu] = useState<{ x: number; y: number; entry: AssetEntry; trigger: HTMLElement }>()
   const [renaming, set_renaming] = useState<string>()

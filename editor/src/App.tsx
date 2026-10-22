@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
-import { use_project_store } from './project/project_store'
+import { useProjectStore } from './project/project_store'
 import { ProjectPicker } from './ProjectPicker'
 import { Workspace } from './Workspace'
 
 export default function App() {
-  const state = use_project_store((store) => store.state)
-  const restore = use_project_store((store) => store.restore)
+  const state = useProjectStore((store) => store.state)
+  const restore = useProjectStore((store) => store.restore)
 
   useEffect(() => {
     void restore()
