@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
+import { useCameraStore } from './camera_store'
 import { load_engine } from './engine'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
@@ -12,6 +13,8 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   const [engine, set_engine] = useState<MainModule>()
   const assets = useAssetStore((store) => store.root)
   const open_scene = useSceneStore((store) => store.open)
+  const camera_position = useCameraStore((store) => store.position)
+  const view_height = useCameraStore((store) => store.view_height)
 
   useEffect(() => {
     if (canvas.current) {
@@ -46,5 +49,12 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
     return () => observer.disconnect()
   }, [])
 
-  return <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport" />
+  return (
+    <div className="viewport">
+      <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
+      <output className="viewport-overlay" aria-label="Camera">
+        x {camera_position.x.toFixed(2)} y {camera_position.y.toFixed(2)} height {view_height.toFixed(2)}
+      </output>
+    </div>
+  )
 }

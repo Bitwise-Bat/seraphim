@@ -1,11 +1,6 @@
 import { useEffect, type RefObject } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
-
-type Camera = {
-  x: number
-  y: number
-  view_height: number
-}
+import { useCameraStore } from './camera_store'
 
 // Each wheel notch scales the view by the same factor, so zooming feels equally fast at every distance.
 const zoom_step = 1.1
@@ -19,8 +14,8 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
     if (!canvas || !engine) {
       return
     }
-    const get_camera = () => engine.Engine.get_camera() as Camera
-    const set_camera = ({ x, y, view_height }: Camera) => engine.Engine.set_camera(x, y, view_height)
+    const { set_camera } = useCameraStore.getState()
+    useCameraStore.getState().attach(engine)
     // Only the height matters: the camera maps view_height world units onto the canvas height.
     const units_per_css_pixel = (view_height: number) => view_height / canvas.getBoundingClientRect().height
     let panning = false
@@ -39,10 +34,10 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
       if (!panning) {
         return
       }
-      const camera = get_camera()
-      const scale = units_per_css_pixel(camera.view_height)
+      const { position, view_height } = useCameraStore.getState()
+      const scale = units_per_css_pixel(view_height)
       // Dragging moves the world with the pointer, so the camera goes the other way; screen y points down.
-      set_camera({ ...camera, x: camera.x - event.movementX * scale, y: camera.y + event.movementY * scale })
+      set_camera({ x: position.x - event.movementX * scale, y: position.y + event.movementY * scale }, view_height)
     }
 
     function end_pan() {
@@ -54,7 +49,7 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
         return
       }
       event.preventDefault()
-      const camera = get_camera()
+      const camera = useCameraStore.getState()
       const factor = event.deltaY > 0 ? zoom_step : 1 / zoom_step
       const view_height = Math.min(
         view_height_limits.max,
@@ -65,7 +60,7 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
       const offset_x = event.clientX - rect.left - rect.width / 2
       const offset_y = rect.height / 2 - (event.clientY - rect.top)
       const shift = units_per_css_pixel(camera.view_height) - units_per_css_pixel(view_height)
-      set_camera({ x: camera.x + offset_x * shift, y: camera.y + offset_y * shift, view_height })
+      set_camera({ x: camera.position.x + offset_x * shift, y: camera.position.y + offset_y * shift }, view_height)
     }
 
     // The right button pans, so its menu would get in the way.
