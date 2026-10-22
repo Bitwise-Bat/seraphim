@@ -14,7 +14,8 @@ Seraphim 2D is a web-only 2D game engine.
 
 ## Build
 
-Requires the `EMSDK` environment variable pointing to an installed Emscripten SDK.
+Requires the `EMSDK` environment variable pointing to an installed Emscripten SDK and `VCPKG_ROOT` pointing to a
+vcpkg checkout. C++ dependencies come from `vcpkg.json`; SDL3 and WebGPU come from Emscripten ports instead.
 
 ```sh
 cmake --preset web-debug
