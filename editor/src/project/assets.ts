@@ -233,6 +233,22 @@ export function is_inside(path: string, folder: string): boolean {
   return path === folder || path.startsWith(`${folder}/`)
 }
 
+export function* files_in(folder: AssetFolder): Generator<AssetFile> {
+  yield* folder.files
+  for (const child of folder.folders) {
+    yield* files_in(child)
+  }
+}
+
+export function find_file_by_id(root: AssetFolder, id: string): AssetFile | undefined {
+  for (const file of files_in(root)) {
+    if (file.id === id) {
+      return file
+    }
+  }
+  return undefined
+}
+
 export function find_folder(root: AssetFolder, path: string): AssetFolder | undefined {
   if (root.path === path) {
     return root

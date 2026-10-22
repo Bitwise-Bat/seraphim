@@ -1,5 +1,5 @@
 import type { MainModule } from 'seraphim/seraphim.js'
-import type { AssetFile, AssetFolder } from './assets'
+import { files_in, type AssetFolder } from './assets'
 
 type RegisteredAsset = {
   url: string
@@ -9,13 +9,6 @@ type RegisteredAsset = {
 
 const registered = new Map<string, RegisteredAsset>()
 let pending: Promise<void> = Promise.resolve()
-
-function* files_in(folder: AssetFolder): Generator<AssetFile> {
-  yield* folder.files
-  for (const child of folder.folders) {
-    yield* files_in(child)
-  }
-}
 
 async function sync(engine: MainModule, root: AssetFolder): Promise<void> {
   const present = new Set<string>()
