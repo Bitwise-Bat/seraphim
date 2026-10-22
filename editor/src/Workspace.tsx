@@ -16,7 +16,7 @@ export function Workspace({ project }: { project: FileSystemDirectoryHandle }) {
 
   return (
     <div className="workspace" style={{ gridTemplateRows: `minmax(0, 1fr) auto ${asset_panel_height}px` }}>
-      <Viewport />
+      <Viewport project={project} />
       <Splitter
         label="Resize asset panel"
         orientation="horizontal"

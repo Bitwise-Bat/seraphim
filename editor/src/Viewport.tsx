@@ -3,8 +3,9 @@ import type { MainModule } from 'seraphim/seraphim.js'
 import { load_engine } from './engine'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
+import { read_main_scene } from './project/scenes'
 
-export function Viewport() {
+export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [engine, set_engine] = useState<MainModule>()
   const assets = useAssetStore((store) => store.root)
@@ -22,6 +23,20 @@ export function Viewport() {
       sync_engine_assets(engine, assets).catch((error: unknown) => console.error('Asset sync failed', error))
     }
   }, [engine, assets])
+
+  useEffect(() => {
+    if (!engine) {
+      return
+    }
+    read_main_scene(project)
+      .then((scene) => {
+        const problem = engine.Engine.load_scene(scene)
+        if (problem) {
+          console.error(`The main scene could not be loaded: ${problem}`)
+        }
+      })
+      .catch((error: unknown) => console.error('Reading the main scene failed', error))
+  }, [engine, project])
 
   useEffect(() => {
     if (!canvas.current) {
