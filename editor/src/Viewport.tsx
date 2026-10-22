@@ -4,6 +4,7 @@ import { load_engine } from './engine'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
 import { useSceneStore } from './project/scene_store'
+import { useViewportDrag } from './viewport_drag'
 
 export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -30,6 +31,8 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
       void open_scene(project, engine)
     }
   }, [engine, project, open_scene])
+
+  useViewportDrag(canvas, engine)
 
   useEffect(() => {
     if (!canvas.current) {
