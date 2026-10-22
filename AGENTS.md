@@ -10,7 +10,16 @@ Seraphim 2D is a web-only 2D game engine.
 - Platform layer: SDL3
 - Renderer: WebGPU
 - Target: WebAssembly via Emscripten (no native builds)
-- Editor/UI: React
+- Editor/UI: React, state in Zustand
+
+### Editor projects
+
+The editor is a hosted web app that keeps each game project in a folder on the user's machine, opened through the File
+System Access API (`showDirectoryPicker`). A project folder holds `project.json`, `assets/`, `scripts/`, `scenes/` and
+the editor's generated `.seraphim/` cache.
+
+Known limitation: the File System Access API exists only in Chromium-based browsers (Chrome, Edge, Opera). Firefox and
+Safari cannot open project folders, and the editor tells the user so instead of offering a fallback.
 
 ## Build
 
