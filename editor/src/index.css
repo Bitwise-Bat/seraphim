@@ -14,6 +14,8 @@ body,
 
 .editor {
   display: grid;
+  /* The engine resizes the canvas backing store to its CSS size, so the canvas must not size its own track. */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   height: 100%;
 }
 

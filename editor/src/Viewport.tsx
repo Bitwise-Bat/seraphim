@@ -10,5 +10,5 @@ export function Viewport() {
     }
   }, [])
 
-  return <canvas ref={canvas} className="viewport" />
+  return <canvas ref={canvas} id="seraphim-canvas" className="viewport" />
 }
