@@ -35,7 +35,11 @@ Use `web-release` for optimized builds. Output goes to `build/<preset>/`.
 
 ## Git
 
-- Write commit messages in English, imperative mood, short subject line.
+- Use Conventional Commits: `type(scope): summary`.
+  - Types: `feat`, `fix`, `refactor`, `perf`, `style`, `docs`, `test`, `build`, `ci`, `chore`.
+  - Scope is the affected area, e.g. `core`, `log`, `editor`, `cmake`.
+  - Summary in English, imperative mood, lowercase, no trailing period, max ~72 characters.
+  - Example: `feat(log): add console sink with runtime level filter`.
 - Never add AI/Claude attribution, `Co-Authored-By` lines, or generated-by footers to commits or PRs.
 - Do not commit build output (`build/`, `cmake-build-*/`) or IDE files.
 - Only commit or push when asked.
