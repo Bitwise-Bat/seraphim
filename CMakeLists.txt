@@ -7,5 +7,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No C++ modules are used, and emscan-deps does not resolve include paths added by --use-port.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 add_subdirectory(engine)
