@@ -1,6 +1,6 @@
 configure_file(core/version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/core/version.hpp @ONLY)
 
-add_executable(seraphim main.cpp core/log.cpp platform/window.cpp)
+add_executable(seraphim main.cpp core/log.cpp platform/input.cpp platform/window.cpp)
 target_include_directories(seraphim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_compile_options(seraphim PRIVATE -sUSE_SDL=3)
 set_target_properties(seraphim PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

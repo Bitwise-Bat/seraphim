@@ -13,6 +13,8 @@ window create_window(const std::string& title)
     const SDL_PropertiesID properties = SDL_CreateProperties();
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, title.c_str());
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_EMSCRIPTEN_CANVAS_ID_STRING, canvas_selector);
+    // Listening on the canvas instead of the whole window leaves keystrokes to the editor's own inputs.
+    SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_EMSCRIPTEN_KEYBOARD_ELEMENT_STRING, canvas_selector);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 

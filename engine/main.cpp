@@ -1,6 +1,7 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include "core/log.hpp"
 #include "core/version.hpp"
+#include "platform/input.hpp"
 #include "platform/window.hpp"
 
 #include <memory>
@@ -13,6 +14,7 @@ namespace
 struct app_state
 {
     seraphim::platform::window window;
+    seraphim::platform::input input;
 };
 
 } // namespace
@@ -42,15 +44,18 @@ SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppIterate(void*)
+SDL_AppResult SDL_AppIterate(void* appstate)
 {
+    static_cast<app_state*>(appstate)->input.end_frame();
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppEvent(void*, SDL_Event* event)
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 {
     if (event->type == SDL_EVENT_QUIT)
         return SDL_APP_SUCCESS;
+
+    static_cast<app_state*>(appstate)->input.handle(*event);
     return SDL_APP_CONTINUE;
 }
 
