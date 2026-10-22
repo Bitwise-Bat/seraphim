@@ -1,0 +1,15 @@
+BasedOnStyle: LLVM
+Standard: Latest
+IndentWidth: 4
+ColumnLimit: 120
+BreakBeforeBraces: Allman
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+NamespaceIndentation: None
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+SortIncludes: CaseInsensitive
+InsertNewlineAtEOF: true
