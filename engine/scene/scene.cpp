@@ -14,4 +14,12 @@ entt::entity scene::create(std::string id, std::string name)
     return entity;
 }
 
+entt::entity scene::find(std::string_view id) const
+{
+    for (const auto [entity, entity_identity] : m_registry.view<const identity>().each())
+        if (entity_identity.id == id)
+            return entity;
+    return entt::null;
+}
+
 } // namespace seraphim::scene

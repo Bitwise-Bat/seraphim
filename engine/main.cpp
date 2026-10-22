@@ -42,6 +42,8 @@ struct app_state
     seraphim::scene::sprite_system sprites;
     // Exists only while the scene is simulated, so the editor can edit a scene without it moving.
     std::optional<seraphim::scene::physics_system> physics;
+    // The script host's function, called once per simulated tick; undefined or null when no scripts run.
+    emscripten::val tick_handler = emscripten::val::undefined();
 };
 
 // SDL owns the app state, but the host page reaches the engine through embind, so the running app is published here.
@@ -87,6 +89,81 @@ struct engine_api
         if (!g_app)
             return;
         g_app->physics.reset();
+    }
+
+    // Ticks are fixed, so this is the same for every tick.
+    static float tick_seconds()
+    {
+        if (!g_app)
+            return 0.0F;
+        return std::chrono::duration<float>(g_app->timestep.step()).count();
+    }
+
+    static void set_tick_handler(emscripten::val handler)
+    {
+        if (!g_app)
+            return;
+        g_app->tick_handler = std::move(handler);
+    }
+
+    // Returns null when the entity does not exist or has no transform.
+    static emscripten::val get_transform(const std::string& id)
+    {
+        if (!g_app)
+            return emscripten::val::null();
+        const auto* placement = g_app->scene.registry().try_get<seraphim::scene::transform>(g_app->scene.find(id));
+        if (!placement)
+            return emscripten::val::null();
+        auto result = emscripten::val::object();
+        result.set("x", placement->position.x);
+        result.set("y", placement->position.y);
+        result.set("rotation", placement->rotation);
+        result.set("scale_x", placement->scale.x);
+        result.set("scale_y", placement->scale.y);
+        return result;
+    }
+
+    // Gives the entity a transform if it has none. Physics bodies are not moved along, so a dynamic body's next step
+    // overwrites the change.
+    static void set_transform(const std::string& id, float x, float y, float rotation, float scale_x, float scale_y)
+    {
+        if (!g_app)
+            return;
+        const entt::entity entity = g_app->scene.find(id);
+        if (entity == entt::null)
+            return;
+        g_app->scene.registry().emplace_or_replace<seraphim::scene::transform>(
+            entity, seraphim::scene::transform{{x, y}, rotation, {scale_x, scale_y}});
+    }
+
+    // Returns the id of the first entity with the name, or an empty string if there is none.
+    static std::string find_entity(const std::string& name)
+    {
+        if (!g_app)
+            return {};
+        for (const auto [entity, entity_identity] :
+             g_app->scene.registry().view<const seraphim::scene::identity>().each())
+            if (entity_identity.name == name)
+                return entity_identity.id;
+        return {};
+    }
+
+    // Keys are SDL scancodes, which are USB HID usage ids.
+    static bool is_key_down(int scancode)
+    {
+        return g_app && is_scancode(scancode) && g_app->input.is_down(static_cast<seraphim::platform::key>(scancode));
+    }
+
+    static bool was_key_pressed(int scancode)
+    {
+        return g_app && is_scancode(scancode) &&
+               g_app->input.was_pressed(static_cast<seraphim::platform::key>(scancode));
+    }
+
+    static bool was_key_released(int scancode)
+    {
+        return g_app && is_scancode(scancode) &&
+               g_app->input.was_released(static_cast<seraphim::platform::key>(scancode));
     }
 
     static std::string save_scene()
@@ -142,6 +219,17 @@ struct engine_api
         if (view_height > 0)
             camera.view_height = view_height;
     }
+    
+    static void get_velocity(std::string entity_id)
+    {
+        if (!g_app)
+            return;
+    }
+    
+    static void set_velocity();
+
+  private:
+    static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
 };
 
 } // namespace
@@ -152,6 +240,14 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("register_asset", &engine_api::register_asset)
         .class_function("load_scene", &engine_api::load_scene)
         .class_function("save_scene", &engine_api::save_scene)
+        .class_function("tick_seconds", &engine_api::tick_seconds)
+        .class_function("set_tick_handler", &engine_api::set_tick_handler)
+        .class_function("get_transform", &engine_api::get_transform)
+        .class_function("set_transform", &engine_api::set_transform)
+        .class_function("find_entity", &engine_api::find_entity)
+        .class_function("is_key_down", &engine_api::is_key_down)
+        .class_function("was_key_pressed", &engine_api::was_key_pressed)
+        .class_function("was_key_released", &engine_api::was_key_released)
         .class_function("start_simulation", &engine_api::start_simulation)
         .class_function("stop_simulation", &engine_api::stop_simulation)
         .class_function("screen_to_world", &engine_api::screen_to_world)
@@ -193,17 +289,20 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     auto& state = *static_cast<app_state*>(appstate);
 
     const int ticks = state.timestep.advance(std::chrono::nanoseconds{SDL_GetTicksNS()});
-
-    // Edges belong to the first tick only, so a single press cannot fire twice when a slow frame runs several ticks.
-    // With no tick this frame they are kept for the next one.
-    if (ticks > 0)
-        state.input.end_frame();
-
-    if (state.physics)
+    const float tick_seconds = std::chrono::duration<float>(state.timestep.step()).count();
+    for (int i = 0; i < ticks; ++i)
     {
-        const float tick_seconds = std::chrono::duration<float>(state.timestep.step()).count();
-        for (int i = 0; i < ticks; ++i)
+        if (state.physics)
+        {
+            // Scripts run first, so physics acts on what they changed this tick.
+            if (!state.tick_handler.isUndefined() && !state.tick_handler.isNull())
+                state.tick_handler();
             state.physics->step(state.scene, tick_seconds);
+        }
+        // Edges belong to the first tick only, so a single press cannot fire twice when a slow frame runs several
+        // ticks. With no tick this frame they are kept for the next one.
+        if (i == 0)
+            state.input.end_frame();
     }
 
     state.renderer.poll();
