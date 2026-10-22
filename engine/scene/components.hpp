@@ -41,4 +41,40 @@ struct sprite
     std::int32_t order = 0;
 };
 
+enum class body_type : std::uint8_t
+{
+    static_body,
+    kinematic,
+    dynamic,
+};
+
+struct rigidbody
+{
+    body_type type = body_type::dynamic;
+    float gravity_scale = 1.0F;
+    bool fixed_rotation = false;
+};
+
+enum class collider_shape : std::uint8_t
+{
+    box,
+    circle,
+};
+
+// An entity with a collider but no rigidbody is static. Sizes are in world units before the transform's scale.
+struct collider
+{
+    collider_shape shape = collider_shape::box;
+    glm::vec2 size{1.0F};
+    // Used by circles only.
+    float radius = 0.5F;
+    glm::vec2 offset{0.0F};
+    // In kilograms per square meter; only dynamic bodies use it, to derive their mass.
+    float density = 1.0F;
+    float friction = 0.6F;
+    float restitution = 0.0F;
+    // Detects overlaps without colliding.
+    bool sensor = false;
+};
+
 } // namespace seraphim::scene

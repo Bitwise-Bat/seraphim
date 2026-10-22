@@ -15,11 +15,12 @@ seraphim_embed_shader(sprite render/shaders/sprite.wgsl)
 add_executable(seraphim main.cpp asset/asset_manager.cpp asset/asset_sources.cpp asset/image_loader.cpp
     core/fixed_timestep.cpp core/log.cpp
     platform/input.cpp platform/window.cpp render/camera2d.cpp render/renderer.cpp render/sprite_renderer.cpp
-    render/texture2d.cpp scene/picking.cpp scene/scene.cpp scene/scene_file.cpp scene/sprite_system.cpp)
+    render/texture2d.cpp scene/physics_system.cpp scene/picking.cpp scene/scene.cpp scene/scene_file.cpp scene/sprite_system.cpp)
+find_package(box2d CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-target_link_libraries(seraphim PRIVATE EnTT::EnTT glm::glm-header-only nlohmann_json::nlohmann_json)
+target_link_libraries(seraphim PRIVATE box2d::box2d EnTT::EnTT glm::glm-header-only nlohmann_json::nlohmann_json)
 target_include_directories(seraphim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_compile_options(seraphim PRIVATE -sUSE_SDL=3 --use-port=emdawnwebgpu)
 set_target_properties(seraphim PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

@@ -7,6 +7,7 @@
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
 #include "scene/components.hpp"
+#include "scene/physics_system.hpp"
 #include "scene/picking.hpp"
 #include "scene/scene.hpp"
 #include "scene/scene_file.hpp"
@@ -39,6 +40,8 @@ struct app_state
     seraphim::render::camera2d camera;
     seraphim::scene::scene scene;
     seraphim::scene::sprite_system sprites;
+    // Exists only while the scene is simulated, so the editor can edit a scene without it moving.
+    std::optional<seraphim::scene::physics_system> physics;
 };
 
 // SDL owns the app state, but the host page reaches the engine through embind, so the running app is published here.
@@ -66,8 +69,24 @@ struct engine_api
         auto scene = seraphim::scene::parse_scene(json);
         if (!scene)
             return std::move(scene.error());
+        // The bodies belong to the old scene's entities.
+        g_app->physics.reset();
         g_app->scene = std::move(*scene);
         return {};
+    }
+
+    static void start_simulation()
+    {
+        if (!g_app)
+            return;
+        g_app->physics.emplace(g_app->scene);
+    }
+
+    static void stop_simulation()
+    {
+        if (!g_app)
+            return;
+        g_app->physics.reset();
     }
 
     static std::string save_scene()
@@ -133,6 +152,8 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("register_asset", &engine_api::register_asset)
         .class_function("load_scene", &engine_api::load_scene)
         .class_function("save_scene", &engine_api::save_scene)
+        .class_function("start_simulation", &engine_api::start_simulation)
+        .class_function("stop_simulation", &engine_api::stop_simulation)
         .class_function("screen_to_world", &engine_api::screen_to_world)
         .class_function("pick_entity", &engine_api::pick_entity)
         .class_function("get_camera", &engine_api::get_camera)
@@ -177,6 +198,13 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     // With no tick this frame they are kept for the next one.
     if (ticks > 0)
         state.input.end_frame();
+
+    if (state.physics)
+    {
+        const float tick_seconds = std::chrono::duration<float>(state.timestep.step()).count();
+        for (int i = 0; i < ticks; ++i)
+            state.physics->step(state.scene, tick_seconds);
+    }
 
     state.renderer.poll();
     if (!state.assets && state.renderer.device())
