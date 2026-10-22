@@ -25,14 +25,14 @@ render::texture2d make_placeholder(const wgpu::Device& device)
 
 } // namespace
 
-asset_manager::asset_manager(wgpu::Device device)
-    : m_device(std::move(device)), m_placeholder(make_placeholder(m_device))
+asset_manager::asset_manager(wgpu::Device device, asset_sources& sources)
+    : m_device(std::move(device)), m_sources(sources), m_placeholder(make_placeholder(m_device))
 {
 }
 
-texture_handle asset_manager::load_texture(const std::string& url)
+texture_handle asset_manager::load_texture(const std::string& id)
 {
-    if (const auto existing = m_handles_by_url.find(url); existing != m_handles_by_url.end())
+    if (const auto existing = m_handles_by_id.find(id); existing != m_handles_by_id.end())
         return existing->second;
 
     std::uint32_t index = 0;
@@ -48,12 +48,12 @@ texture_handle asset_manager::load_texture(const std::string& url)
     }
 
     texture_slot& slot = m_slots[index];
-    slot.url = url;
+    slot.id = id;
     slot.in_use = true;
 
     const texture_handle handle{index, slot.generation};
-    m_handles_by_url.emplace(url, handle);
-    m_pending.emplace(request_image(url), handle);
+    m_handles_by_id.emplace(id, handle);
+    request(handle);
     return handle;
 }
 
@@ -63,11 +63,12 @@ void asset_manager::unload(texture_handle handle)
         return;
 
     texture_slot& slot = m_slots[handle.index];
-    m_handles_by_url.erase(slot.url);
+    m_handles_by_id.erase(slot.id);
     std::erase_if(m_pending, [handle](const auto& entry) { return entry.second == handle; });
 
-    slot.url.clear();
+    slot.id.clear();
     slot.texture.reset();
+    slot.request.reset();
     slot.in_use = false;
     ++slot.generation;
     m_free_slots.push_back(handle.index);
@@ -81,9 +82,15 @@ const render::texture2d& asset_manager::texture(texture_handle handle) const
 
 void asset_manager::update()
 {
-    for (auto& [request, result] : take_finished_images())
+    for (const std::string& id : m_sources.take_changed())
     {
-        const auto pending = m_pending.find(request);
+        if (const auto handle = m_handles_by_id.find(id); handle != m_handles_by_id.end())
+            request(handle->second);
+    }
+
+    for (auto& [finished, result] : take_finished_images())
+    {
+        const auto pending = m_pending.find(finished);
         // Unloaded while the request was in flight.
         if (pending == m_pending.end())
             continue;
@@ -92,12 +99,29 @@ void asset_manager::update()
         m_pending.erase(pending);
         texture_slot& slot = m_slots[handle.index];
 
+        if (slot.request != finished)
+            continue;
+        slot.request.reset();
+
+        // A failed reload keeps showing the previous texture rather than the placeholder.
         if (!result)
             continue;
 
         slot.texture.emplace(m_device, result->width, result->height, result->rgba);
-        log::info("Loaded texture '{}' ({}x{})", slot.url, result->width, result->height);
+        log::info("Loaded texture '{}' ({}x{})", slot.id, result->width, result->height);
     }
+}
+
+void asset_manager::request(texture_handle handle)
+{
+    texture_slot& slot = m_slots[handle.index];
+    // Without a source yet, the texture is requested once the host registers one.
+    const std::string* url = m_sources.find(slot.id);
+    if (!url)
+        return;
+
+    slot.request = request_image(*url);
+    m_pending.emplace(*slot.request, handle);
 }
 
 const asset_manager::texture_slot* asset_manager::find(texture_handle handle) const

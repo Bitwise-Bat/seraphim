@@ -9,10 +9,13 @@
 
 #include <chrono>
 #include <cstdint>
+#include <emscripten/bind.h>
 #include <memory>
 #include <optional>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <string>
+#include <utility>
 
 namespace
 {
@@ -25,12 +28,35 @@ struct app_state
     seraphim::platform::input input;
     seraphim::core::fixed_timestep timestep{std::chrono::nanoseconds{std::chrono::seconds{1}} / tick_rate};
     seraphim::render::renderer renderer{seraphim::platform::canvas_selector};
+    seraphim::asset::asset_sources sources;
     // Created once the renderer has a device, since uploading textures needs one.
     std::optional<seraphim::asset::asset_manager> assets;
     seraphim::render::camera2d camera;
 };
 
+// SDL owns the app state, but the host page reaches the engine through embind, so the running app is published here.
+app_state* g_app = nullptr;
+
+// Exposed to JavaScript as the Engine class.
+struct engine_api
+{
+    static void register_asset(std::string id, std::string url)
+    {
+        if (!g_app)
+        {
+            seraphim::log::error("Asset '{}' registered before the engine started", id);
+            return;
+        }
+        g_app->sources.set(std::move(id), std::move(url));
+    }
+};
+
 } // namespace
+
+EMSCRIPTEN_BINDINGS(seraphim)
+{
+    emscripten::class_<engine_api>("Engine").class_function("register_asset", &engine_api::register_asset);
+}
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
 {
@@ -55,7 +81,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
 
     auto state = std::make_unique<app_state>(std::move(window));
     state->renderer.resize(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
-    *appstate = state.release();
+    g_app = state.release();
+    *appstate = g_app;
     return SDL_APP_CONTINUE;
 }
 
@@ -72,7 +99,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     state.renderer.poll();
     if (!state.assets && state.renderer.device())
-        state.assets.emplace(state.renderer.device());
+        state.assets.emplace(state.renderer.device(), state.sources);
     if (!state.assets)
         return SDL_APP_CONTINUE;
 
@@ -100,4 +127,5 @@ void SDL_AppQuit(void* appstate, SDL_AppResult)
 {
     // SDL hands ownership back here; SDL_Quit runs after this returns.
     std::unique_ptr<app_state> state{static_cast<app_state*>(appstate)};
+    g_app = nullptr;
 }
