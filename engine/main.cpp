@@ -100,6 +100,29 @@ struct engine_api
             return {};
         return g_app->scene.registry().get<seraphim::scene::identity>(entity).id;
     }
+
+    static emscripten::val get_camera()
+    {
+        if (!g_app)
+            return {};
+        auto& camera = g_app->camera;
+        auto obj = emscripten::val::object();
+        obj.set("x", camera.position.x);
+        obj.set("y", camera.position.y);
+        obj.set("view_height", camera.view_height);
+        return obj;
+    }
+
+    static void set_camera(float x, float y, float view_height = -1)
+    {
+        if (!g_app)
+            return;
+        auto& camera = g_app->camera;
+        camera.position = {x, y};
+
+        if (view_height > 0)
+            camera.view_height = view_height;
+    }
 };
 
 } // namespace
@@ -111,7 +134,9 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("load_scene", &engine_api::load_scene)
         .class_function("save_scene", &engine_api::save_scene)
         .class_function("screen_to_world", &engine_api::screen_to_world)
-        .class_function("pick_entity", &engine_api::pick_entity);
+        .class_function("pick_entity", &engine_api::pick_entity)
+        .class_function("get_camera", &engine_api::get_camera)
+        .class_function("set_camera", &engine_api::set_camera);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
