@@ -96,6 +96,11 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       const saved = get().document
       // Writing the engine's serialization keeps the file format owned by one place.
       const text = engine.Engine.save_scene()
+      // The engine returns nothing once it has stopped running; writing that would wipe the scene file.
+      if (!text) {
+        set({ error: 'Saving failed: the engine is not running, so the scene file was left unchanged' })
+        return
+      }
       try {
         await write_main_scene(project, text)
         // Edits made while the file was being written are still unsaved.
