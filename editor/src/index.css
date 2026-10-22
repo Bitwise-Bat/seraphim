@@ -11,6 +11,7 @@
   --accent: #7aa2ff;
   --axis-x: #f0605a;
   --axis-y: #6cc66c;
+  --collider: #5ce0a0;
   background: var(--background);
   color: var(--text);
 }
@@ -370,7 +371,8 @@ button:focus-visible,
   color: var(--accent);
 }
 
-.inspector input {
+.inspector input,
+.inspector select {
   min-width: 0;
   padding: 0.125rem 0.25rem;
   border: 1px solid var(--border);
@@ -381,7 +383,8 @@ button:focus-visible,
   font-size: 0.85rem;
 }
 
-.inspector input:focus-visible {
+.inspector input:focus-visible,
+.inspector select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
@@ -468,6 +471,28 @@ button:focus-visible,
   pointer-events: none;
 }
 
+.collider-outlines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.collider-outline rect,
+.collider-outline circle {
+  fill: none;
+  stroke: var(--collider);
+  stroke-width: 1.5;
+  /* The outlines are drawn in world units, so the stroke would otherwise scale with the zoom. */
+  vector-effect: non-scaling-stroke;
+}
+
+.collider-sensor rect,
+.collider-sensor circle {
+  stroke-dasharray: 4 3;
+}
+
 .gizmo-handle {
   color: var(--text);
   cursor: grab;
@@ -524,6 +549,14 @@ button:focus-visible,
   gap: 0.25rem;
 }
 
+.play-controls {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.play-controls [aria-pressed='true'],
 .gizmo-toolbar [aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--accent);

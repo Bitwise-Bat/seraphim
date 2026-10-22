@@ -1,6 +1,6 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { create } from 'zustand'
-import { component_defaults, type SceneDocument, type SceneEntity } from './scene_document'
+import { component_defaults, type SceneDocument, type SceneEntity, type Vec2 } from './scene_document'
 import { read_main_scene, write_main_scene } from './scenes'
 
 type SceneStore = {
@@ -8,14 +8,19 @@ type SceneStore = {
   selected?: string
   // True while the document has changes that are not saved to disk.
   dirty: boolean
+  // While true the engine simulates the scene and the document is frozen, so stopping restores it as it was.
+  playing: boolean
   error?: string
   open: (project: FileSystemDirectoryHandle, engine: MainModule) => Promise<void>
   save: () => Promise<void>
+  play: () => void
+  stop: () => void
   select: (id: string | undefined) => void
   // Returns the id of the new entity.
   add_entity: () => string
   remove_entity: (id: string) => void
   update_entity: (id: string, change: (entity: SceneEntity) => SceneEntity) => void
+  set_gravity: (gravity: Vec2) => void
 }
 
 function error_message(error: unknown): string {
@@ -45,6 +50,10 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
   }
 
   function change(document: SceneDocument, selected = get().selected): void {
+    // Reloading the engine mid-simulation would throw away the running bodies.
+    if (get().playing) {
+      return
+    }
     set({ document, selected, dirty: true })
     push_frame ??= requestAnimationFrame(push_to_engine)
   }
@@ -58,11 +67,12 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
 
   return {
     dirty: false,
+    playing: false,
 
     async open(next_project, next_engine) {
       project = next_project
       engine = next_engine
-      set({ document: undefined, selected: undefined, dirty: false, error: undefined })
+      set({ document: undefined, selected: undefined, dirty: false, playing: false, error: undefined })
       try {
         const text = await read_main_scene(next_project)
         const problem = next_engine.Engine.load_scene(text)
@@ -78,7 +88,8 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
     },
 
     async save() {
-      if (!project || !engine || !get().document) {
+      // The engine holds the simulated scene, not the document, until play stops.
+      if (!project || !engine || !get().document || get().playing) {
         return
       }
       push_to_engine()
@@ -92,6 +103,24 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       } catch (error) {
         set({ error: `Saving failed: ${error_message(error)}` })
       }
+    },
+
+    play() {
+      if (!engine || !get().document || get().playing) {
+        return
+      }
+      push_to_engine()
+      engine.Engine.start_simulation()
+      set({ playing: true })
+    },
+
+    stop() {
+      if (!engine || !get().playing) {
+        return
+      }
+      engine.Engine.stop_simulation()
+      set({ playing: false })
+      push_to_engine()
     },
 
     select(id) {
@@ -115,6 +144,13 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
 
     update_entity(id, update) {
       change_entities((entities) => entities.map((entity) => (entity.id === id ? update(entity) : entity)))
+    },
+
+    set_gravity(gravity) {
+      const { document } = get()
+      if (document) {
+        change({ ...document, gravity })
+      }
     },
   }
 })

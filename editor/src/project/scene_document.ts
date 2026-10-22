@@ -18,9 +18,34 @@ export type Sprite = {
   order: number
 }
 
+export type BodyType = 'static' | 'kinematic' | 'dynamic'
+
+export type Rigidbody = {
+  type: BodyType
+  gravity_scale: number
+  fixed_rotation: boolean
+}
+
+export type ColliderShape = 'box' | 'circle'
+
+// Without a rigidbody the collider is static. Sizes are in world units before the transform's scale.
+export type Collider = {
+  shape: ColliderShape
+  size: Vec2
+  // Used by circles only.
+  radius: number
+  offset: Vec2
+  density: number
+  friction: number
+  restitution: number
+  sensor: boolean
+}
+
 export type Components = {
   transform?: Transform
   sprite?: Sprite
+  rigidbody?: Rigidbody
+  collider?: Collider
 }
 
 export type ComponentName = keyof Components
@@ -33,10 +58,23 @@ export type SceneEntity = {
 
 export type SceneDocument = {
   format_version: number
+  // In meters per second squared.
+  gravity: Vec2
   entities: SceneEntity[]
 }
 
 export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<Components[Name]> } = {
   transform: () => ({ position: [0, 0], rotation: 0, scale: [1, 1] }),
   sprite: () => ({ texture: '', size: [1, 1], uv_rect: [0, 0, 1, 1], color: [1, 1, 1, 1], order: 0 }),
+  rigidbody: () => ({ type: 'dynamic', gravity_scale: 1, fixed_rotation: false }),
+  collider: () => ({
+    shape: 'box',
+    size: [1, 1],
+    radius: 0.5,
+    offset: [0, 0],
+    density: 1,
+    friction: 0.6,
+    restitution: 0,
+    sensor: false,
+  }),
 }

@@ -4,8 +4,13 @@ import { find_file_by_id } from './project/assets'
 import { useAssetStore } from './project/asset_store'
 import {
   component_defaults,
+  type BodyType,
+  type Collider,
+  type ColliderShape,
   type ComponentName,
   type Components,
+  type Rigidbody,
+  type SceneDocument,
   type SceneEntity,
   type Sprite,
   type Transform,
@@ -46,6 +51,39 @@ function NumberField({ label, value, step = 0.1, on_change }: NumberFieldProps) 
         }}
       />
     </label>
+  )
+}
+
+type SelectFieldProps<T extends string> = {
+  label: string
+  value: T
+  options: { value: T; label: string }[]
+  on_change: (value: T) => void
+}
+
+function SelectField<T extends string>({ label, value, options, on_change }: SelectFieldProps<T>) {
+  return (
+    <select aria-label={label} value={value} onChange={(event) => on_change(event.target.value as T)}>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function CheckboxField({
+  label,
+  value,
+  on_change,
+}: {
+  label: string
+  value: boolean
+  on_change: (value: boolean) => void
+}) {
+  return (
+    <input type="checkbox" aria-label={label} checked={value} onChange={(event) => on_change(event.target.checked)} />
   )
 }
 
@@ -173,7 +211,99 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
   )
 }
 
-const component_titles: Record<ComponentName, string> = { transform: 'Transform', sprite: 'Sprite' }
+const body_types: { value: BodyType; label: string }[] = [
+  { value: 'static', label: 'Static' },
+  { value: 'kinematic', label: 'Kinematic' },
+  { value: 'dynamic', label: 'Dynamic' },
+]
+
+function RigidbodyFields({ value, on_change }: { value: Rigidbody; on_change: (value: Rigidbody) => void }) {
+  return (
+    <>
+      <Row label="Type">
+        <SelectField
+          label="Type"
+          value={value.type}
+          options={body_types}
+          on_change={(type) => on_change({ ...value, type })}
+        />
+      </Row>
+      <Row label="Gravity">
+        <NumberField
+          label="×"
+          value={value.gravity_scale}
+          on_change={(gravity_scale) => on_change({ ...value, gravity_scale })}
+        />
+      </Row>
+      <Row label="Fixed rotation">
+        <CheckboxField
+          label="Fixed rotation"
+          value={value.fixed_rotation}
+          on_change={(fixed_rotation) => on_change({ ...value, fixed_rotation })}
+        />
+      </Row>
+    </>
+  )
+}
+
+const collider_shapes: { value: ColliderShape; label: string }[] = [
+  { value: 'box', label: 'Box' },
+  { value: 'circle', label: 'Circle' },
+]
+
+function ColliderFields({ value, on_change }: { value: Collider; on_change: (value: Collider) => void }) {
+  return (
+    <>
+      <Row label="Shape">
+        <SelectField
+          label="Shape"
+          value={value.shape}
+          options={collider_shapes}
+          on_change={(shape) => on_change({ ...value, shape })}
+        />
+      </Row>
+      {value.shape === 'box' ? (
+        <Row label="Size">
+          <VectorFields labels={['W', 'H']} values={value.size} on_change={(size) => on_change({ ...value, size })} />
+        </Row>
+      ) : (
+        <Row label="Radius">
+          <NumberField label="R" value={value.radius} on_change={(radius) => on_change({ ...value, radius })} />
+        </Row>
+      )}
+      <Row label="Offset">
+        <VectorFields
+          labels={['X', 'Y']}
+          values={value.offset}
+          on_change={(offset) => on_change({ ...value, offset })}
+        />
+      </Row>
+      <Row label="Density">
+        <NumberField label="kg/m²" value={value.density} on_change={(density) => on_change({ ...value, density })} />
+      </Row>
+      <Row label="Friction">
+        <NumberField label="μ" value={value.friction} on_change={(friction) => on_change({ ...value, friction })} />
+      </Row>
+      <Row label="Bounce">
+        <NumberField
+          label="e"
+          value={value.restitution}
+          on_change={(restitution) => on_change({ ...value, restitution })}
+        />
+      </Row>
+      <Row label="Sensor">
+        <CheckboxField label="Sensor" value={value.sensor} on_change={(sensor) => on_change({ ...value, sensor })} />
+      </Row>
+    </>
+  )
+}
+
+const component_titles: Record<ComponentName, string> = {
+  transform: 'Transform',
+  sprite: 'Sprite',
+  rigidbody: 'Rigidbody',
+  collider: 'Collider',
+}
 
 type ComponentSectionProps = {
   name: ComponentName
@@ -197,7 +327,7 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite } = entity.components
+  const { transform, sprite, rigidbody, collider } = entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -230,6 +360,16 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
           <SpriteFields value={sprite} on_change={(value) => set_component('sprite', value)} />
         </ComponentSection>
       )}
+      {rigidbody && (
+        <ComponentSection name="rigidbody" on_remove={() => set_component('rigidbody', undefined)}>
+          <RigidbodyFields value={rigidbody} on_change={(value) => set_component('rigidbody', value)} />
+        </ComponentSection>
+      )}
+      {collider && (
+        <ComponentSection name="collider" on_remove={() => set_component('collider', undefined)}>
+          <ColliderFields value={collider} on_change={(value) => set_component('collider', value)} />
+        </ComponentSection>
+      )}
       {missing.length > 0 && (
         <div className="inspector-add">
           {missing.map((name) => (
@@ -248,16 +388,31 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
   )
 }
 
+function SceneInspector({ document }: { document: SceneDocument }) {
+  const set_gravity = useSceneStore((store) => store.set_gravity)
+
+  return (
+    <section aria-label="Scene">
+      <header className="panel-header">
+        <h3 className="panel-title">Scene</h3>
+      </header>
+      <Row label="Gravity">
+        <VectorFields labels={['X', 'Y']} values={document.gravity} on_change={set_gravity} />
+      </Row>
+      <p className="panel-hint">Select an entity to edit it.</p>
+    </section>
+  )
+}
+
 export function Inspector() {
-  const entity = useSceneStore((store) => store.document?.entities.find((candidate) => candidate.id === store.selected))
+  const document = useSceneStore((store) => store.document)
+  const selected = useSceneStore((store) => store.selected)
+  const entity = document?.entities.find((candidate) => candidate.id === selected)
 
   return (
     <section className="panel inspector" aria-label="Inspector">
-      {entity ? (
-        <EntityInspector key={entity.id} entity={entity} />
-      ) : (
-        <p className="panel-hint">Select an entity to edit it.</p>
-      )}
+      {entity && <EntityInspector key={entity.id} entity={entity} />}
+      {!entity && document && <SceneInspector document={document} />}
     </section>
   )
 }
