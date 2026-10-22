@@ -1,0 +1,10 @@
+#pragma once
+
+#include <string_view>
+
+namespace seraphim::render::shaders
+{
+
+inline constexpr std::string_view @SERAPHIM_SHADER_NAME@ = R"wgsl(@SERAPHIM_SHADER_SOURCE@)wgsl";
+
+} // namespace seraphim::render::shaders
