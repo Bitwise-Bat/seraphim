@@ -1,5 +1,7 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { create } from 'zustand'
+import { start_scripts, type ScriptRun } from '../scripting/script_host'
+import { useScriptStore } from './asset_store'
 import { component_defaults, type SceneDocument, type SceneEntity, type Vec2 } from './scene_document'
 import { read_main_scene, write_main_scene } from './scenes'
 
@@ -13,7 +15,8 @@ type SceneStore = {
   error?: string
   open: (project: FileSystemDirectoryHandle, engine: MainModule) => Promise<void>
   save: () => Promise<void>
-  play: () => void
+  // Compiles and starts the scene's scripts first; fails with an error instead of playing when they do not compile.
+  play: () => Promise<void>
   stop: () => void
   select: (id: string | undefined) => void
   // Returns the id of the new entity.
@@ -31,6 +34,9 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
   let project: FileSystemDirectoryHandle | undefined
   let engine: MainModule | undefined
   let push_frame: number | undefined
+  let scripts: ScriptRun | undefined
+  // Compiling scripts takes a moment, during which a second click on Play must not start another run.
+  let starting = false
 
   // The engine re-creates the whole scene from JSON, so several edits within one frame (a dragged number field) are
   // pushed once.
@@ -110,19 +116,30 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       }
     },
 
-    play() {
-      if (!engine || !get().document || get().playing) {
+    async play() {
+      const { document } = get()
+      if (!engine || !document || get().playing || starting) {
         return
       }
-      push_to_engine()
-      engine.Engine.start_simulation()
-      set({ playing: true })
+      starting = true
+      try {
+        push_to_engine()
+        scripts = await start_scripts(engine, document, useScriptStore.getState().root)
+        engine.Engine.start_simulation()
+        set({ playing: true, error: undefined })
+      } catch (error) {
+        set({ error: `Play failed: ${error_message(error)}` })
+      } finally {
+        starting = false
+      }
     },
 
     stop() {
       if (!engine || !get().playing) {
         return
       }
+      scripts?.stop()
+      scripts = undefined
       engine.Engine.stop_simulation()
       set({ playing: false })
       push_to_engine()
