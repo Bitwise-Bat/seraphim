@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.2)
-project(seraphim LANGUAGES CXX)
+project(seraphim VERSION 0.1.0 LANGUAGES CXX)
 
 if(NOT EMSCRIPTEN)
     message(FATAL_ERROR "Seraphim builds only with Emscripten. Use a web-* preset.")
