@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <webgpu/webgpu_cpp.h>
 
 namespace seraphim::render
@@ -16,6 +17,9 @@ class renderer
 
     void resize(std::uint32_t width, std::uint32_t height);
     void render();
+
+    // Null until the browser has granted a device.
+    [[nodiscard]] const wgpu::Device& device() const { return m_device; }
 
   private:
     void request_device();
