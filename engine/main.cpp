@@ -7,6 +7,7 @@
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
 #include "scene/scene.hpp"
+#include "scene/scene_file.hpp"
 #include "scene/sprite_system.hpp"
 
 #include <chrono>
@@ -53,13 +54,36 @@ struct engine_api
         }
         g_app->sources.set(std::move(id), std::move(url));
     }
+
+    // Replaces the running scene. Returns why the scene was rejected, or an empty string once it is loaded; a rejected
+    // scene leaves the running one untouched.
+    static std::string load_scene(const std::string& json)
+    {
+        if (!g_app)
+            return "The engine has not started yet";
+        auto scene = seraphim::scene::parse_scene(json);
+        if (!scene)
+            return std::move(scene.error());
+        g_app->scene = std::move(*scene);
+        return {};
+    }
+
+    static std::string save_scene()
+    {
+        if (!g_app)
+            return {};
+        return seraphim::scene::serialize_scene(g_app->scene);
+    }
 };
 
 } // namespace
 
 EMSCRIPTEN_BINDINGS(seraphim)
 {
-    emscripten::class_<engine_api>("Engine").class_function("register_asset", &engine_api::register_asset);
+    emscripten::class_<engine_api>("Engine")
+        .class_function("register_asset", &engine_api::register_asset)
+        .class_function("load_scene", &engine_api::load_scene)
+        .class_function("save_scene", &engine_api::save_scene);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
