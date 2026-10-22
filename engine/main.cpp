@@ -6,6 +6,8 @@
 #include "platform/input.hpp"
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
+#include "scene/components.hpp"
+#include "scene/picking.hpp"
 #include "scene/scene.hpp"
 #include "scene/scene_file.hpp"
 #include "scene/sprite_system.hpp"
@@ -74,6 +76,30 @@ struct engine_api
             return {};
         return seraphim::scene::serialize_scene(g_app->scene);
     }
+
+    // Takes pixels from the top-left corner of the canvas backing store, not CSS pixels.
+    static emscripten::val screen_to_world(float x, float y)
+    {
+        if (!g_app)
+            return emscripten::val::null();
+        const glm::vec2 world = g_app->camera.screen_to_world({x, y}, g_app->renderer.viewport_size());
+        auto result = emscripten::val::object();
+        result.set("x", world.x);
+        result.set("y", world.y);
+        return result;
+    }
+
+    // Returns the id of the topmost sprite entity at a canvas pixel, or an empty string if there is none.
+    static std::string pick_entity(float x, float y)
+    {
+        if (!g_app)
+            return {};
+        const glm::vec2 world = g_app->camera.screen_to_world({x, y}, g_app->renderer.viewport_size());
+        const entt::entity entity = seraphim::scene::pick_sprite(g_app->scene, world);
+        if (entity == entt::null)
+            return {};
+        return g_app->scene.registry().get<seraphim::scene::identity>(entity).id;
+    }
 };
 
 } // namespace
@@ -83,7 +109,9 @@ EMSCRIPTEN_BINDINGS(seraphim)
     emscripten::class_<engine_api>("Engine")
         .class_function("register_asset", &engine_api::register_asset)
         .class_function("load_scene", &engine_api::load_scene)
-        .class_function("save_scene", &engine_api::save_scene);
+        .class_function("save_scene", &engine_api::save_scene)
+        .class_function("screen_to_world", &engine_api::screen_to_world)
+        .class_function("pick_entity", &engine_api::pick_entity);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])

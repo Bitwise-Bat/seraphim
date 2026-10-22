@@ -5,6 +5,7 @@
 #include "render/sprite_renderer.hpp"
 
 #include <cstdint>
+#include <glm/vec2.hpp>
 #include <optional>
 #include <webgpu/webgpu_cpp.h>
 
@@ -37,6 +38,8 @@ class renderer
 
     // Null until the browser has granted a device.
     [[nodiscard]] const wgpu::Device& device() const { return m_device; }
+    // In pixels, as last passed to resize().
+    [[nodiscard]] glm::vec2 viewport_size() const { return {m_width, m_height}; }
 
   private:
     void request_device();

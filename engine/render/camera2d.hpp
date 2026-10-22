@@ -14,6 +14,8 @@ struct camera2d
     float view_height = 10.0F;
 
     [[nodiscard]] glm::mat4 view_projection(float aspect) const;
+    // Screen positions are in pixels from the top-left corner of a viewport of the given pixel size.
+    [[nodiscard]] glm::vec2 screen_to_world(glm::vec2 screen, glm::vec2 viewport) const;
 };
 
 } // namespace seraphim::render
