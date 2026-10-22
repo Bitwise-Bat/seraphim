@@ -6,6 +6,9 @@ import { ContextMenu, type ContextMenuItem } from './ContextMenu'
 import { find_folder, join_path, type AssetEntry } from './project/assets'
 import { useAssetStore } from './project/asset_store'
 import { RenameInput } from './RenameInput'
+import { Splitter } from './Splitter'
+
+const tree_width_limits = { min: 120, max: 480 }
 
 function dropped_files(event: DragEvent): File[] {
   // Dropped folders also arrive as items; only plain files are imported. Items without an entry are files handed over
@@ -94,6 +97,7 @@ export function AssetBrowser() {
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
+  const [tree_width, set_tree_width] = useState(192)
   // Returning focus to where the menu was opened lets keyboard users continue from there.
   const close_menu = useCallback(() => {
     menu?.trigger.focus()
@@ -157,6 +161,7 @@ export function AssetBrowser() {
   return (
     <section
       className={`asset-browser${dragging_files ? ' asset-browser-dragging' : ''}`}
+      style={{ gridTemplateColumns: `${tree_width}px auto minmax(0, 1fr)` }}
       aria-label="Assets"
       onDragOver={on_drag_over}
       onDragLeave={(event) => {
@@ -167,7 +172,16 @@ export function AssetBrowser() {
       }}
       onDrop={on_drop}
     >
-      {root && <AssetTree root={root} />}
+      {root ? <AssetTree root={root} /> : <div />}
+      <Splitter
+        label="Resize folder tree"
+        orientation="vertical"
+        panel="before"
+        size={tree_width}
+        min={tree_width_limits.min}
+        max={tree_width_limits.max}
+        on_resize={set_tree_width}
+      />
       <div
         className="asset-content"
         onContextMenu={(event) => open_menu(event, [{ label: 'New folder', action: () => void new_folder() }])}

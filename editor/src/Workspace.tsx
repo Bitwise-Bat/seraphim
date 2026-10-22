@@ -19,6 +19,8 @@ export function Workspace({ project }: { project: FileSystemDirectoryHandle }) {
       <Viewport />
       <Splitter
         label="Resize asset panel"
+        orientation="horizontal"
+        panel="after"
         size={asset_panel_height}
         min={asset_panel_limits.min}
         max={asset_panel_limits.max}
