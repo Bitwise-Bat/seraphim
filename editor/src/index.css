@@ -276,6 +276,8 @@ button:focus-visible,
 
 .workspace-main {
   display: grid;
+  /* Without an explicit row the track sizes to its content, and the canvas grows the page on every resize. */
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
