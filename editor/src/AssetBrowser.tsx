@@ -1,14 +1,35 @@
-import { useCallback, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useState,
+  type Dispatch,
+  type DragEvent,
+  type MouseEvent,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
+import { AssetBrowserContext, useBrowserStore } from './asset_browser_context'
 import { start_asset_drag, useFolderDrop } from './asset_drag'
 import { AssetThumbnail } from './AssetThumbnail'
 import { AssetTree } from './AssetTree'
 import { ContextMenu, type ContextMenuItem } from './ContextMenu'
 import { find_folder, join_path, type AssetEntry } from './project/assets'
-import { useAssetStore } from './project/asset_store'
+import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
+import { script_template } from './project/scripts'
 import { RenameInput } from './RenameInput'
 import { Splitter } from './Splitter'
 
 const tree_width_limits = { min: 120, max: 480 }
+
+type NewFile = { label: string; name: string; contents: string }
+
+const folders: { store: AssetStoreHook; hint: string; new_file?: NewFile }[] = [
+  { store: useAssetStore, hint: 'Drop images here, or right-click to create a folder.' },
+  {
+    store: useScriptStore,
+    hint: 'Drop .ts or .js files here, or right-click to create a script or folder.',
+    new_file: { label: 'New script', ...script_template },
+  },
+]
 
 function dropped_files(event: DragEvent): File[] {
   // Dropped folders also arrive as items; only plain files are imported. Items without an entry are files handed over
@@ -20,7 +41,7 @@ function dropped_files(event: DragEvent): File[] {
 }
 
 function PathSegment({ label, path }: { label: string; path: string }) {
-  const navigate = useAssetStore((store) => store.navigate)
+  const navigate = useBrowserStore((store) => store.navigate)
   const drop = useFolderDrop(path)
   return (
     <button
@@ -46,7 +67,8 @@ type AssetTileProps = {
 }
 
 function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu, on_rename, on_rename_end }: AssetTileProps) {
-  const current_path = useAssetStore((store) => store.current_path)
+  const folder = useBrowserStore((store) => store.folder)
+  const current_path = useBrowserStore((store) => store.current_path)
   const drop = useFolderDrop(path)
   // Only folders accept dropped assets.
   const drop_props = entry.kind === 'directory' ? drop.handlers : {}
@@ -72,7 +94,7 @@ function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu,
       className={`asset-tile${drop.active ? ' drop-target' : ''}`}
       title={path}
       draggable
-      onDragStart={(event) => start_asset_drag(event, { source_path: current_path, entry })}
+      onDragStart={(event) => start_asset_drag(event, folder, { source_path: current_path, entry })}
       onClick={on_open}
       onContextMenu={on_context_menu}
       {...drop_props}
@@ -86,18 +108,46 @@ function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu,
 type MenuState = { x: number; y: number; items: ContextMenuItem[]; trigger: HTMLElement }
 
 export function AssetBrowser() {
-  const root = useAssetStore((store) => store.root)
-  const current_path = useAssetStore((store) => store.current_path)
-  const error = useAssetStore((store) => store.error)
-  const navigate = useAssetStore((store) => store.navigate)
-  const import_into_current = useAssetStore((store) => store.import_into_current)
-  const create_folder_in_current = useAssetStore((store) => store.create_folder_in_current)
-  const rename = useAssetStore((store) => store.rename)
-  const remove = useAssetStore((store) => store.remove)
+  const [selected, set_selected] = useState(0)
+  const [tree_width, set_tree_width] = useState(192)
+
+  return (
+    <AssetBrowserContext value={folders[selected].store}>
+      <FolderBrowser
+        // Renaming and open menus refer to entries of one folder, so switching folders starts afresh.
+        key={selected}
+        hint={folders[selected].hint}
+        new_file={folders[selected].new_file}
+        tree={<AssetTree stores={folders.map(({ store }) => store)} selected={selected} on_select={set_selected} />}
+        tree_width={tree_width}
+        on_tree_resize={set_tree_width}
+      />
+    </AssetBrowserContext>
+  )
+}
+
+type FolderBrowserProps = {
+  hint: string
+  new_file?: NewFile
+  tree: ReactNode
+  tree_width: number
+  on_tree_resize: Dispatch<SetStateAction<number>>
+}
+
+function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: FolderBrowserProps) {
+  const folder_name = useBrowserStore((store) => store.folder)
+  const root = useBrowserStore((store) => store.root)
+  const current_path = useBrowserStore((store) => store.current_path)
+  const error = useBrowserStore((store) => store.error)
+  const navigate = useBrowserStore((store) => store.navigate)
+  const import_into_current = useBrowserStore((store) => store.import_into_current)
+  const create_folder_in_current = useBrowserStore((store) => store.create_folder_in_current)
+  const create_file_in_current = useBrowserStore((store) => store.create_file_in_current)
+  const rename = useBrowserStore((store) => store.rename)
+  const remove = useBrowserStore((store) => store.remove)
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
-  const [tree_width, set_tree_width] = useState(192)
   // Returning focus to where the menu was opened lets keyboard users continue from there.
   const close_menu = useCallback(() => {
     menu?.trigger.focus()
@@ -136,6 +186,18 @@ export function AssetBrowser() {
     }
   }
 
+  async function create_new_file(file: NewFile) {
+    const name = await create_file_in_current(file.name, file.contents)
+    if (name) {
+      set_renaming(name)
+    }
+  }
+
+  const create_actions: ContextMenuItem[] = [
+    ...(new_file ? [{ label: new_file.label, action: () => void create_new_file(new_file) }] : []),
+    { label: 'New folder', action: () => void new_folder() },
+  ]
+
   function confirm_delete(entry: AssetEntry) {
     const what = entry.kind === 'directory' ? `the folder "${entry.name}" and everything in it` : `"${entry.name}"`
     if (window.confirm(`Delete ${what}? This cannot be undone.`)) {
@@ -172,7 +234,7 @@ export function AssetBrowser() {
       }}
       onDrop={on_drop}
     >
-      {root ? <AssetTree root={root} /> : <div />}
+      {tree}
       <Splitter
         label="Resize folder tree"
         orientation="vertical"
@@ -180,15 +242,15 @@ export function AssetBrowser() {
         size={tree_width}
         min={tree_width_limits.min}
         max={tree_width_limits.max}
-        on_resize={set_tree_width}
+        on_resize={on_tree_resize}
       />
       <div
         className="asset-content"
-        onContextMenu={(event) => open_menu(event, [{ label: 'New folder', action: () => void new_folder() }])}
+        onContextMenu={(event) => open_menu(event, create_actions)}
       >
         <div className="asset-toolbar">
           <nav className="asset-path" aria-label="Asset folder path">
-            <PathSegment label="assets" path="" />
+            <PathSegment label={folder_name} path="" />
             {segments.map((segment, index) => (
               <span key={index}>
                 {' / '}
@@ -196,14 +258,16 @@ export function AssetBrowser() {
               </span>
             ))}
           </nav>
-          <button type="button" className="asset-toolbar-button" onClick={() => void new_folder()}>
-            New folder
-          </button>
+          <div className="asset-toolbar-actions">
+            {create_actions.map(({ label, action }) => (
+              <button key={label} type="button" className="asset-toolbar-button" onClick={action}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         {error && <p role="alert">{error}</p>}
-        {folder && folder.folders.length + folder.files.length === 0 && (
-          <p className="asset-hint">Drop images here, or right-click to create a folder.</p>
-        )}
+        {folder && folder.folders.length + folder.files.length === 0 && <p className="asset-hint">{hint}</p>}
         <ul className="asset-grid">
           {folder?.folders.map((child) => (
             <li key={child.path}>

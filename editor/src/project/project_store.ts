@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { create_project, read_project, type ProjectManifest } from './project'
+import { create_project, read_project, write_script_setup, type ProjectManifest } from './project'
 import { load_recent_project, save_recent_project } from './recent_project'
 
 export type ProjectState =
@@ -39,6 +39,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => {
   async function load(directory: FileSystemDirectoryHandle, read: typeof read_project): Promise<void> {
     try {
       const manifest = await read(directory)
+      await write_script_setup(directory)
       await save_recent_project(directory)
       set({ state: { status: 'open', directory, manifest } })
     } catch (error) {

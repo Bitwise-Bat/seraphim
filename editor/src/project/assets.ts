@@ -19,6 +19,7 @@ type AssetMeta = {
 }
 
 export const assets_folder = 'assets'
+export const scripts_folder = 'scripts'
 const meta_suffix = '.meta'
 const meta_version = 1
 
@@ -214,6 +215,14 @@ export async function create_folder(parent: FileSystemDirectoryHandle): Promise<
   const name = unique_name('New folder', await names_in(parent))
   await parent.getDirectoryHandle(name, { create: true })
   return name
+}
+
+// Returns the name of the created file, which gets a number suffix when the requested name is taken.
+export async function create_file(parent: FileSystemDirectoryHandle, name: string, contents: string): Promise<string> {
+  const free_name = unique_name(name, await names_in(parent))
+  await write_text(parent, free_name, contents)
+  await write_meta(parent, free_name)
+  return free_name
 }
 
 export async function delete_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry): Promise<void> {

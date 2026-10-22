@@ -1,3 +1,5 @@
+import { script_tsconfig, script_types } from './scripts'
+
 export type ProjectManifest = {
   format_version: number
   name: string
@@ -7,7 +9,8 @@ const manifest_file = 'project.json'
 const current_format_version = 1
 const project_folders = ['assets', 'scripts', 'scenes']
 // The editor keeps generated files such as compiled scripts in .seraphim/, which never belongs in version control.
-const gitignore = '.seraphim/\n'
+const generated_folder = '.seraphim'
+const gitignore = `${generated_folder}/\n`
 
 async function file_exists(directory: FileSystemDirectoryHandle, name: string): Promise<boolean> {
   try {
@@ -58,6 +61,17 @@ export async function create_project(directory: FileSystemDirectoryHandle): Prom
   const manifest: ProjectManifest = { format_version: current_format_version, name: directory.name }
   await write_text(directory, manifest_file, `${JSON.stringify(manifest, null, 2)}\n`)
   return manifest
+}
+
+// Lets code editors resolve and type-check imports of the engine API. The tsconfig is only created when missing, since
+// the user may tune it.
+export async function write_script_setup(directory: FileSystemDirectoryHandle): Promise<void> {
+  const generated = await directory.getDirectoryHandle(generated_folder, { create: true })
+  const types = await generated.getDirectoryHandle(script_types.folder, { create: true })
+  await write_text(types, script_types.name, script_types.contents)
+  if (!(await file_exists(directory, script_tsconfig.name))) {
+    await write_text(directory, script_tsconfig.name, script_tsconfig.contents)
+  }
 }
 
 export async function read_project(directory: FileSystemDirectoryHandle): Promise<ProjectManifest> {
