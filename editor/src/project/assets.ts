@@ -22,10 +22,6 @@ export const assets_folder = 'assets'
 const meta_suffix = '.meta'
 const meta_version = 1
 
-function join_path(folder: string, name: string): string {
-  return folder ? `${folder}/${name}` : name
-}
-
 function by_name<T extends { name: string }>(a: T, b: T): number {
   return a.name.localeCompare(b.name, undefined, { numeric: true })
 }
@@ -169,31 +165,55 @@ async function copy_folder(source: FileSystemDirectoryHandle, target: FileSystem
   }
 }
 
-// Copies and then deletes, since FileSystemHandle.move() is not available for every kind of folder. The .meta file
-// moves along, so the asset keeps its id and references to it stay valid.
-export async function rename_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry, new_name: string): Promise<void> {
+// Moves and renames in one step. Copies and then deletes, since FileSystemHandle.move() is not available for every
+// kind of folder. The .meta file moves along, so the asset keeps its id and references to it stay valid.
+async function transfer_entry(
+  source: FileSystemDirectoryHandle,
+  entry: AssetEntry,
+  target: FileSystemDirectoryHandle,
+  new_name: string,
+): Promise<void> {
   const problem = validate_asset_name(new_name)
   if (problem) {
     throw new Error(problem)
   }
-  if (new_name === entry.name) {
+  if (new_name === entry.name && (await source.isSameEntry(target))) {
     return
   }
-  if ((await names_in(folder)).has(new_name)) {
-    throw new Error(`${new_name} already exists in this folder`)
+  if ((await names_in(target)).has(new_name)) {
+    throw new Error(`${new_name} already exists in ${target.name}`)
   }
 
   if (entry.kind === 'directory') {
-    const target = await folder.getDirectoryHandle(new_name, { create: true })
-    await copy_folder(await folder.getDirectoryHandle(entry.name), target)
-    await folder.removeEntry(entry.name, { recursive: true })
+    const copy = await target.getDirectoryHandle(new_name, { create: true })
+    await copy_folder(await source.getDirectoryHandle(entry.name), copy)
+    await source.removeEntry(entry.name, { recursive: true })
     return
   }
 
-  await copy_file(await folder.getFileHandle(entry.name), folder, new_name)
-  await copy_file(await folder.getFileHandle(entry.name + meta_suffix), folder, new_name + meta_suffix)
-  await folder.removeEntry(entry.name)
-  await folder.removeEntry(entry.name + meta_suffix)
+  await copy_file(await source.getFileHandle(entry.name), target, new_name)
+  await copy_file(await source.getFileHandle(entry.name + meta_suffix), target, new_name + meta_suffix)
+  await source.removeEntry(entry.name)
+  await source.removeEntry(entry.name + meta_suffix)
+}
+
+export function rename_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry, new_name: string): Promise<void> {
+  return transfer_entry(folder, entry, folder, new_name)
+}
+
+export function move_entry(
+  source: FileSystemDirectoryHandle,
+  entry: AssetEntry,
+  target: FileSystemDirectoryHandle,
+): Promise<void> {
+  return transfer_entry(source, entry, target, entry.name)
+}
+
+// Returns the name of the created folder, which gets a number suffix when the default name is taken.
+export async function create_folder(parent: FileSystemDirectoryHandle): Promise<string> {
+  const name = unique_name('New folder', await names_in(parent))
+  await parent.getDirectoryHandle(name, { create: true })
+  return name
 }
 
 export async function delete_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry): Promise<void> {
@@ -205,12 +225,20 @@ export async function delete_entry(folder: FileSystemDirectoryHandle, entry: Ass
   await folder.removeEntry(entry.name + meta_suffix)
 }
 
+export function join_path(folder: string, name: string): string {
+  return folder ? `${folder}/${name}` : name
+}
+
+export function is_inside(path: string, folder: string): boolean {
+  return path === folder || path.startsWith(`${folder}/`)
+}
+
 export function find_folder(root: AssetFolder, path: string): AssetFolder | undefined {
   if (root.path === path) {
     return root
   }
   for (const folder of root.folders) {
-    if (path === folder.path || path.startsWith(`${folder.path}/`)) {
+    if (is_inside(path, folder.path)) {
       return find_folder(folder, path)
     }
   }

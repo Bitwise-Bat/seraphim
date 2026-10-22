@@ -1,7 +1,9 @@
 import { useCallback, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import { start_asset_drag, useFolderDrop } from './asset_drag'
 import { AssetThumbnail } from './AssetThumbnail'
-import { ContextMenu } from './ContextMenu'
-import { find_folder, type AssetEntry } from './project/assets'
+import { AssetTree } from './AssetTree'
+import { ContextMenu, type ContextMenuItem } from './ContextMenu'
+import { find_folder, join_path, type AssetEntry } from './project/assets'
 import { useAssetStore } from './project/asset_store'
 import { RenameInput } from './RenameInput'
 
@@ -14,10 +16,25 @@ function dropped_files(event: DragEvent): File[] {
     .filter((file) => file !== null)
 }
 
+function PathSegment({ label, path }: { label: string; path: string }) {
+  const navigate = useAssetStore((store) => store.navigate)
+  const drop = useFolderDrop(path)
+  return (
+    <button
+      type="button"
+      className={drop.active ? 'drop-target' : undefined}
+      onClick={() => navigate(path)}
+      {...drop.handlers}
+    >
+      {label}
+    </button>
+  )
+}
+
 type AssetTileProps = {
   entry: AssetEntry
+  path: string
   thumbnail: ReactNode
-  title?: string
   renaming: boolean
   on_open?: () => void
   on_context_menu: (event: MouseEvent) => void
@@ -25,7 +42,12 @@ type AssetTileProps = {
   on_rename_end: () => void
 }
 
-function AssetTile({ entry, thumbnail, title, renaming, on_open, on_context_menu, on_rename, on_rename_end }: AssetTileProps) {
+function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu, on_rename, on_rename_end }: AssetTileProps) {
+  const current_path = useAssetStore((store) => store.current_path)
+  const drop = useFolderDrop(path)
+  // Only folders accept dropped assets.
+  const drop_props = entry.kind === 'directory' ? drop.handlers : {}
+
   if (renaming) {
     return (
       <div className="asset-tile">
@@ -42,12 +64,23 @@ function AssetTile({ entry, thumbnail, title, renaming, on_open, on_context_menu
     )
   }
   return (
-    <button type="button" className="asset-tile" title={title} onClick={on_open} onContextMenu={on_context_menu}>
+    <button
+      type="button"
+      className={`asset-tile${drop.active ? ' drop-target' : ''}`}
+      title={path}
+      draggable
+      onDragStart={(event) => start_asset_drag(event, { source_path: current_path, entry })}
+      onClick={on_open}
+      onContextMenu={on_context_menu}
+      {...drop_props}
+    >
       {thumbnail}
       <span className="asset-name">{entry.name}</span>
     </button>
   )
 }
+
+type MenuState = { x: number; y: number; items: ContextMenuItem[]; trigger: HTMLElement }
 
 export function AssetBrowser() {
   const root = useAssetStore((store) => store.root)
@@ -55,12 +88,13 @@ export function AssetBrowser() {
   const error = useAssetStore((store) => store.error)
   const navigate = useAssetStore((store) => store.navigate)
   const import_into_current = useAssetStore((store) => store.import_into_current)
+  const create_folder_in_current = useAssetStore((store) => store.create_folder_in_current)
   const rename = useAssetStore((store) => store.rename)
   const remove = useAssetStore((store) => store.remove)
-  const [dragging, set_dragging] = useState(false)
-  const [menu, set_menu] = useState<{ x: number; y: number; entry: AssetEntry; trigger: HTMLElement }>()
+  const [dragging_files, set_dragging_files] = useState(false)
+  const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
-  // Returning focus to the tile lets keyboard users continue where they opened the menu.
+  // Returning focus to where the menu was opened lets keyboard users continue from there.
   const close_menu = useCallback(() => {
     menu?.trigger.focus()
     set_menu(undefined)
@@ -72,20 +106,29 @@ export function AssetBrowser() {
   function on_drag_over(event: DragEvent) {
     if (event.dataTransfer.types.includes('Files')) {
       event.preventDefault()
-      set_dragging(true)
+      set_dragging_files(true)
     }
   }
 
   function on_drop(event: DragEvent) {
+    if (!event.dataTransfer.types.includes('Files')) {
+      return
+    }
     event.preventDefault()
-    set_dragging(false)
+    set_dragging_files(false)
     void import_into_current(dropped_files(event))
   }
 
-  function open_menu(entry: AssetEntry) {
-    return (event: MouseEvent) => {
-      event.preventDefault()
-      set_menu({ x: event.clientX, y: event.clientY, entry, trigger: event.currentTarget as HTMLElement })
+  function open_menu(event: MouseEvent, items: ContextMenuItem[]) {
+    event.preventDefault()
+    event.stopPropagation()
+    set_menu({ x: event.clientX, y: event.clientY, items, trigger: event.currentTarget as HTMLElement })
+  }
+
+  async function new_folder() {
+    const name = await create_folder_in_current()
+    if (name) {
+      set_renaming(name)
     }
   }
 
@@ -99,8 +142,13 @@ export function AssetBrowser() {
   function tile_props(entry: AssetEntry) {
     return {
       entry,
+      path: join_path(current_path, entry.name),
       renaming: renaming === entry.name,
-      on_context_menu: open_menu(entry),
+      on_context_menu: (event: MouseEvent) =>
+        open_menu(event, [
+          { label: 'Rename', action: () => set_renaming(entry.name) },
+          { label: 'Delete', action: () => confirm_delete(entry) },
+        ]),
       on_rename: (new_name: string) => void rename(entry, new_name),
       on_rename_end: () => set_renaming(undefined),
     }
@@ -108,65 +156,58 @@ export function AssetBrowser() {
 
   return (
     <section
-      className={`asset-browser${dragging ? ' asset-browser-dragging' : ''}`}
+      className={`asset-browser${dragging_files ? ' asset-browser-dragging' : ''}`}
       aria-label="Assets"
       onDragOver={on_drag_over}
       onDragLeave={(event) => {
         // Moving between child elements also fires dragleave; only leaving the panel itself ends the drag.
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          set_dragging(false)
+          set_dragging_files(false)
         }
       }}
       onDrop={on_drop}
     >
-      <nav className="asset-path" aria-label="Asset folder">
-        <button type="button" onClick={() => navigate('')}>
-          assets
-        </button>
-        {segments.map((segment, index) => (
-          <span key={index}>
-            {' / '}
-            <button type="button" onClick={() => navigate(segments.slice(0, index + 1).join('/'))}>
-              {segment}
-            </button>
-          </span>
-        ))}
-      </nav>
-      {error && <p role="alert">{error}</p>}
-      {folder && folder.folders.length + folder.files.length === 0 && (
-        <p className="asset-hint">Drop images here to add them to the project.</p>
-      )}
-      <ul className="asset-grid">
-        {folder?.folders.map((child) => (
-          <li key={child.path}>
-            <AssetTile
-              {...tile_props({ kind: 'directory', name: child.name })}
-              thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
-              on_open={() => navigate(child.path)}
-            />
-          </li>
-        ))}
-        {folder?.files.map((file) => (
-          <li key={file.id}>
-            <AssetTile
-              {...tile_props({ kind: 'file', name: file.name })}
-              thumbnail={<AssetThumbnail file={file} />}
-              title={file.path}
-            />
-          </li>
-        ))}
-      </ul>
-      {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          items={[
-            { label: 'Rename', action: () => set_renaming(menu.entry.name) },
-            { label: 'Delete', action: () => confirm_delete(menu.entry) },
-          ]}
-          on_close={close_menu}
-        />
-      )}
+      {root && <AssetTree root={root} />}
+      <div
+        className="asset-content"
+        onContextMenu={(event) => open_menu(event, [{ label: 'New folder', action: () => void new_folder() }])}
+      >
+        <div className="asset-toolbar">
+          <nav className="asset-path" aria-label="Asset folder path">
+            <PathSegment label="assets" path="" />
+            {segments.map((segment, index) => (
+              <span key={index}>
+                {' / '}
+                <PathSegment label={segment} path={segments.slice(0, index + 1).join('/')} />
+              </span>
+            ))}
+          </nav>
+          <button type="button" className="asset-toolbar-button" onClick={() => void new_folder()}>
+            New folder
+          </button>
+        </div>
+        {error && <p role="alert">{error}</p>}
+        {folder && folder.folders.length + folder.files.length === 0 && (
+          <p className="asset-hint">Drop images here, or right-click to create a folder.</p>
+        )}
+        <ul className="asset-grid">
+          {folder?.folders.map((child) => (
+            <li key={child.path}>
+              <AssetTile
+                {...tile_props({ kind: 'directory', name: child.name })}
+                thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
+                on_open={() => navigate(child.path)}
+              />
+            </li>
+          ))}
+          {folder?.files.map((file) => (
+            <li key={file.id}>
+              <AssetTile {...tile_props({ kind: 'file', name: file.name })} thumbnail={<AssetThumbnail file={file} />} />
+            </li>
+          ))}
+        </ul>
+      </div>
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} on_close={close_menu} />}
     </section>
   )
 }

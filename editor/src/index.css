@@ -85,14 +85,82 @@ button:focus-visible,
 }
 
 .asset-browser {
-  overflow: auto;
-  padding: 0.5rem 0.75rem;
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  min-height: 0;
   background: var(--panel);
 }
 
 .asset-browser-dragging {
   outline: 2px dashed var(--accent);
   outline-offset: -4px;
+}
+
+.drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.asset-tree {
+  overflow: auto;
+  padding: 0.5rem 0.25rem;
+  border-right: 1px solid var(--border);
+}
+
+.asset-tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-tree ul ul {
+  padding-left: 0.75rem;
+}
+
+.asset-tree-node {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.125rem 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: none;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-tree-node:hover {
+  background: var(--control);
+}
+
+.asset-tree-node[aria-current='location'] {
+  background: var(--control-hover);
+  color: var(--accent);
+}
+
+.asset-content {
+  overflow: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.asset-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.asset-toolbar-button {
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--control);
+  font-size: 0.85rem;
+}
+
+.asset-toolbar-button:hover {
+  background: var(--control-hover);
 }
 
 .asset-path button {
