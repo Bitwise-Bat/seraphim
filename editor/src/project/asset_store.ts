@@ -1,5 +1,14 @@
 import { create } from 'zustand'
-import { assets_folder, find_folder, import_files, scan_folder, type AssetFolder } from './assets'
+import {
+  assets_folder,
+  delete_entry,
+  find_folder,
+  import_files,
+  rename_entry,
+  scan_folder,
+  type AssetEntry,
+  type AssetFolder,
+} from './assets'
 
 type AssetStore = {
   root?: AssetFolder
@@ -7,6 +16,8 @@ type AssetStore = {
   error?: string
   scan: (project: FileSystemDirectoryHandle) => Promise<void>
   import_into_current: (files: File[]) => Promise<void>
+  rename: (entry: AssetEntry, new_name: string) => Promise<void>
+  remove: (entry: AssetEntry) => Promise<void>
   navigate: (path: string) => void
 }
 
@@ -29,6 +40,31 @@ export const use_asset_store = create<AssetStore>()((set, get) => {
     set({ root, current_path, error: undefined })
   }
 
+  // Rescans even when the change fails halfway, so the browser always shows what is actually on disk.
+  function change_current_folder(change: (folder: FileSystemDirectoryHandle) => Promise<void>): Promise<void> {
+    return serialized(async () => {
+      const { root, current_path } = get()
+      const folder = root && find_folder(root, current_path)
+      if (!root || !folder) {
+        return
+      }
+      let failure: string | undefined
+      try {
+        await change(folder.handle)
+      } catch (error) {
+        failure = error_message(error)
+      }
+      try {
+        await rescan(root.handle)
+      } catch (error) {
+        failure ??= error_message(error)
+      }
+      if (failure) {
+        set({ error: failure })
+      }
+    })
+  }
+
   return {
     current_path: '',
 
@@ -41,20 +77,9 @@ export const use_asset_store = create<AssetStore>()((set, get) => {
         }
       }),
 
-    import_into_current: (files) =>
-      serialized(async () => {
-        const { root, current_path } = get()
-        const folder = root && find_folder(root, current_path)
-        if (!root || !folder) {
-          return
-        }
-        try {
-          await import_files(folder.handle, files)
-          await rescan(root.handle)
-        } catch (error) {
-          set({ error: error_message(error) })
-        }
-      }),
+    import_into_current: (files) => change_current_folder((folder) => import_files(folder, files)),
+    rename: (entry, new_name) => change_current_folder((folder) => rename_entry(folder, entry, new_name)),
+    remove: (entry) => change_current_folder((folder) => delete_entry(folder, entry)),
 
     navigate(path) {
       set({ current_path: path })

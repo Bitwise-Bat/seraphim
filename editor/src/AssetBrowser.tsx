@@ -1,7 +1,9 @@
-import { useState, type DragEvent } from 'react'
+import { useCallback, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
 import { AssetThumbnail } from './AssetThumbnail'
-import { find_folder } from './project/assets'
+import { ContextMenu } from './ContextMenu'
+import { find_folder, type AssetEntry } from './project/assets'
 import { use_asset_store } from './project/asset_store'
+import { RenameInput } from './RenameInput'
 
 function dropped_files(event: DragEvent): File[] {
   // Dropped folders also arrive as items; only plain files are imported. Items without an entry are files handed over
@@ -12,13 +14,57 @@ function dropped_files(event: DragEvent): File[] {
     .filter((file) => file !== null)
 }
 
+type AssetTileProps = {
+  entry: AssetEntry
+  thumbnail: ReactNode
+  title?: string
+  renaming: boolean
+  on_open?: () => void
+  on_context_menu: (event: MouseEvent) => void
+  on_rename: (new_name: string) => void
+  on_rename_end: () => void
+}
+
+function AssetTile({ entry, thumbnail, title, renaming, on_open, on_context_menu, on_rename, on_rename_end }: AssetTileProps) {
+  if (renaming) {
+    return (
+      <div className="asset-tile">
+        {thumbnail}
+        <RenameInput
+          name={entry.name}
+          on_commit={(new_name) => {
+            on_rename_end()
+            on_rename(new_name)
+          }}
+          on_cancel={on_rename_end}
+        />
+      </div>
+    )
+  }
+  return (
+    <button type="button" className="asset-tile" title={title} onClick={on_open} onContextMenu={on_context_menu}>
+      {thumbnail}
+      <span className="asset-name">{entry.name}</span>
+    </button>
+  )
+}
+
 export function AssetBrowser() {
   const root = use_asset_store((store) => store.root)
   const current_path = use_asset_store((store) => store.current_path)
   const error = use_asset_store((store) => store.error)
   const navigate = use_asset_store((store) => store.navigate)
   const import_into_current = use_asset_store((store) => store.import_into_current)
+  const rename = use_asset_store((store) => store.rename)
+  const remove = use_asset_store((store) => store.remove)
   const [dragging, set_dragging] = useState(false)
+  const [menu, set_menu] = useState<{ x: number; y: number; entry: AssetEntry; trigger: HTMLElement }>()
+  const [renaming, set_renaming] = useState<string>()
+  // Returning focus to the tile lets keyboard users continue where they opened the menu.
+  const close_menu = useCallback(() => {
+    menu?.trigger.focus()
+    set_menu(undefined)
+  }, [menu])
 
   const folder = root && find_folder(root, current_path)
   const segments = current_path ? current_path.split('/') : []
@@ -34,6 +80,30 @@ export function AssetBrowser() {
     event.preventDefault()
     set_dragging(false)
     void import_into_current(dropped_files(event))
+  }
+
+  function open_menu(entry: AssetEntry) {
+    return (event: MouseEvent) => {
+      event.preventDefault()
+      set_menu({ x: event.clientX, y: event.clientY, entry, trigger: event.currentTarget as HTMLElement })
+    }
+  }
+
+  function confirm_delete(entry: AssetEntry) {
+    const what = entry.kind === 'directory' ? `the folder "${entry.name}" and everything in it` : `"${entry.name}"`
+    if (window.confirm(`Delete ${what}? This cannot be undone.`)) {
+      void remove(entry)
+    }
+  }
+
+  function tile_props(entry: AssetEntry) {
+    return {
+      entry,
+      renaming: renaming === entry.name,
+      on_context_menu: open_menu(entry),
+      on_rename: (new_name: string) => void rename(entry, new_name),
+      on_rename_end: () => set_renaming(undefined),
+    }
   }
 
   return (
@@ -69,21 +139,34 @@ export function AssetBrowser() {
       <ul className="asset-grid">
         {folder?.folders.map((child) => (
           <li key={child.path}>
-            <button type="button" className="asset-tile" onClick={() => navigate(child.path)}>
-              <span className="asset-thumbnail asset-thumbnail-label">folder</span>
-              <span className="asset-name">{child.name}</span>
-            </button>
+            <AssetTile
+              {...tile_props({ kind: 'directory', name: child.name })}
+              thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
+              on_open={() => navigate(child.path)}
+            />
           </li>
         ))}
         {folder?.files.map((file) => (
           <li key={file.id}>
-            <button type="button" className="asset-tile" title={file.path}>
-              <AssetThumbnail file={file} />
-              <span className="asset-name">{file.name}</span>
-            </button>
+            <AssetTile
+              {...tile_props({ kind: 'file', name: file.name })}
+              thumbnail={<AssetThumbnail file={file} />}
+              title={file.path}
+            />
           </li>
         ))}
       </ul>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={[
+            { label: 'Rename', action: () => set_renaming(menu.entry.name) },
+            { label: 'Delete', action: () => confirm_delete(menu.entry) },
+          ]}
+          on_close={close_menu}
+        />
+      )}
     </section>
   )
 }

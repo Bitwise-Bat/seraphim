@@ -115,11 +115,7 @@ function unique_name(name: string, taken: Set<string>): string {
 }
 
 export async function import_files(folder: FileSystemDirectoryHandle, files: File[]): Promise<void> {
-  const taken = new Set<string>()
-  for await (const name of folder.keys()) {
-    taken.add(name)
-  }
-
+  const taken = await names_in(folder)
   for (const file of files) {
     const name = unique_name(file.name, taken)
     taken.add(name)
@@ -128,6 +124,85 @@ export async function import_files(folder: FileSystemDirectoryHandle, files: Fil
     await writable.close()
     await write_meta(folder, name)
   }
+}
+
+export type AssetEntry = { kind: 'file' | 'directory'; name: string }
+
+async function names_in(folder: FileSystemDirectoryHandle): Promise<Set<string>> {
+  const names = new Set<string>()
+  for await (const name of folder.keys()) {
+    names.add(name)
+  }
+  return names
+}
+
+// Returns why the name cannot be used, or undefined when it is valid.
+export function validate_asset_name(name: string): string | undefined {
+  if (!name.trim()) {
+    return 'The name cannot be empty'
+  }
+  if (/[\\/:*?"<>|]/.test(name)) {
+    return 'The name cannot contain \\ / : * ? " < > |'
+  }
+  if (name.startsWith('.')) {
+    return 'The name cannot start with a dot'
+  }
+  if (name.endsWith(meta_suffix) || name.endsWith('.crswap')) {
+    return `The name cannot end with ${meta_suffix} or .crswap`
+  }
+  return undefined
+}
+
+async function copy_file(source: FileSystemFileHandle, target: FileSystemDirectoryHandle, name: string): Promise<void> {
+  const writable = await (await target.getFileHandle(name, { create: true })).createWritable()
+  await writable.write(await source.getFile())
+  await writable.close()
+}
+
+async function copy_folder(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle): Promise<void> {
+  for await (const entry of source.values()) {
+    if (entry.kind === 'file') {
+      await copy_file(entry, target, entry.name)
+    } else {
+      await copy_folder(entry, await target.getDirectoryHandle(entry.name, { create: true }))
+    }
+  }
+}
+
+// Copies and then deletes, since FileSystemHandle.move() is not available for every kind of folder. The .meta file
+// moves along, so the asset keeps its id and references to it stay valid.
+export async function rename_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry, new_name: string): Promise<void> {
+  const problem = validate_asset_name(new_name)
+  if (problem) {
+    throw new Error(problem)
+  }
+  if (new_name === entry.name) {
+    return
+  }
+  if ((await names_in(folder)).has(new_name)) {
+    throw new Error(`${new_name} already exists in this folder`)
+  }
+
+  if (entry.kind === 'directory') {
+    const target = await folder.getDirectoryHandle(new_name, { create: true })
+    await copy_folder(await folder.getDirectoryHandle(entry.name), target)
+    await folder.removeEntry(entry.name, { recursive: true })
+    return
+  }
+
+  await copy_file(await folder.getFileHandle(entry.name), folder, new_name)
+  await copy_file(await folder.getFileHandle(entry.name + meta_suffix), folder, new_name + meta_suffix)
+  await folder.removeEntry(entry.name)
+  await folder.removeEntry(entry.name + meta_suffix)
+}
+
+export async function delete_entry(folder: FileSystemDirectoryHandle, entry: AssetEntry): Promise<void> {
+  if (entry.kind === 'directory') {
+    await folder.removeEntry(entry.name, { recursive: true })
+    return
+  }
+  await folder.removeEntry(entry.name)
+  await folder.removeEntry(entry.name + meta_suffix)
 }
 
 export function find_folder(root: AssetFolder, path: string): AssetFolder | undefined {
