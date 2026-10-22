@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
 import { load_engine } from './engine'
+import { Gizmo } from './Gizmo'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
 import { useSceneStore } from './project/scene_store'
@@ -50,6 +51,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   return (
     <div className="viewport">
       <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
+      <Gizmo canvas_ref={canvas} />
       <ViewportOverlay canvas_ref={canvas} />
     </div>
   )

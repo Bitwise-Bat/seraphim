@@ -9,6 +9,8 @@
   --text: #e6e6e6;
   --text-muted: #9a9aa6;
   --accent: #7aa2ff;
+  --axis-x: #f0605a;
+  --axis-y: #6cc66c;
   background: var(--background);
   color: var(--text);
 }
@@ -454,4 +456,75 @@ button:focus-visible,
   flex-wrap: wrap;
   gap: 0.375rem;
   margin-top: 0.75rem;
+}
+
+.gizmo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* Only the handles take the pointer, so clicks elsewhere still reach the canvas for picking and panning. */
+  pointer-events: none;
+}
+
+.gizmo-handle {
+  color: var(--text);
+  cursor: grab;
+  pointer-events: all;
+}
+
+.gizmo-handle:active {
+  cursor: grabbing;
+}
+
+.gizmo-handle line,
+.gizmo-handle circle {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+}
+
+.gizmo-handle:hover line,
+.gizmo-handle:hover circle {
+  stroke-width: 3;
+}
+
+/* A thin line is hard to grab, so each one gets an invisible wide twin to catch the pointer. */
+.gizmo-handle .gizmo-hit,
+.gizmo-handle:hover .gizmo-hit {
+  stroke: transparent;
+  stroke-width: 14;
+}
+
+.gizmo-handle polygon,
+.gizmo-handle rect {
+  fill: currentcolor;
+}
+
+.gizmo-x,
+.gizmo-scale_x {
+  color: var(--axis-x);
+}
+
+.gizmo-y,
+.gizmo-scale_y {
+  color: var(--axis-y);
+}
+
+.gizmo-rotate {
+  color: var(--accent);
+}
+
+.gizmo-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.gizmo-toolbar [aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
 }
