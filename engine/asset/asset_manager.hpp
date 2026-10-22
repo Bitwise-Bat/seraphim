@@ -1,0 +1,59 @@
+#pragma once
+
+#include "asset/image_loader.hpp"
+#include "render/texture2d.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <webgpu/webgpu_cpp.h>
+
+namespace seraphim::asset
+{
+
+// The generation detects handles that outlive an unload, even after their slot has been reused.
+struct texture_handle
+{
+    std::uint32_t index = 0;
+    std::uint32_t generation = 0;
+
+    friend bool operator==(const texture_handle&, const texture_handle&) = default;
+};
+
+class asset_manager
+{
+  public:
+    explicit asset_manager(wgpu::Device device);
+
+    // Returns at once; the texture streams in later. Loading the same URL again shares the existing handle.
+    [[nodiscard]] texture_handle load_texture(const std::string& url);
+    void unload(texture_handle handle);
+
+    // Falls back to a placeholder while the texture is loading, if it failed, or if the handle is stale.
+    [[nodiscard]] const render::texture2d& texture(texture_handle handle) const;
+
+    // Uploads images that finished decoding since the last call.
+    void update();
+
+  private:
+    struct texture_slot
+    {
+        std::string url;
+        std::optional<render::texture2d> texture;
+        std::uint32_t generation = 1;
+        bool in_use = false;
+    };
+
+    [[nodiscard]] const texture_slot* find(texture_handle handle) const;
+
+    wgpu::Device m_device;
+    render::texture2d m_placeholder;
+    std::vector<texture_slot> m_slots;
+    std::vector<std::uint32_t> m_free_slots;
+    std::unordered_map<std::string, texture_handle> m_handles_by_url;
+    std::unordered_map<image_request, texture_handle> m_pending;
+};
+
+} // namespace seraphim::asset

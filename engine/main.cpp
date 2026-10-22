@@ -1,4 +1,5 @@
 #define SDL_MAIN_USE_CALLBACKS
+#include "asset/asset_manager.hpp"
 #include "core/fixed_timestep.hpp"
 #include "core/log.hpp"
 #include "core/version.hpp"
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -23,6 +25,8 @@ struct app_state
     seraphim::platform::input input;
     seraphim::core::fixed_timestep timestep{std::chrono::nanoseconds{std::chrono::seconds{1}} / tick_rate};
     seraphim::render::renderer renderer{seraphim::platform::canvas_selector};
+    // Created once the renderer has a device, since uploading textures needs one.
+    std::optional<seraphim::asset::asset_manager> assets;
 };
 
 } // namespace
@@ -64,6 +68,11 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     // With no tick this frame they are kept for the next one.
     if (ticks > 0)
         state.input.end_frame();
+
+    if (!state.assets && state.renderer.device())
+        state.assets.emplace(state.renderer.device());
+    if (state.assets)
+        state.assets->update();
 
     state.renderer.render();
     return SDL_APP_CONTINUE;

@@ -1,6 +1,6 @@
 configure_file(core/version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generated/core/version.hpp @ONLY)
 
-add_executable(seraphim main.cpp core/fixed_timestep.cpp core/log.cpp
+add_executable(seraphim main.cpp asset/asset_manager.cpp asset/image_loader.cpp core/fixed_timestep.cpp core/log.cpp
     platform/input.cpp platform/window.cpp render/renderer.cpp render/texture2d.cpp)
 target_include_directories(seraphim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_compile_options(seraphim PRIVATE -sUSE_SDL=3 --use-port=emdawnwebgpu)
