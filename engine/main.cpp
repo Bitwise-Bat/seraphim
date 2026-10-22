@@ -4,8 +4,10 @@
 #include "core/version.hpp"
 #include "platform/input.hpp"
 #include "platform/window.hpp"
+#include "render/renderer.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -20,6 +22,7 @@ struct app_state
     seraphim::platform::window window;
     seraphim::platform::input input;
     seraphim::core::fixed_timestep timestep{std::chrono::nanoseconds{std::chrono::seconds{1}} / tick_rate};
+    seraphim::render::renderer renderer{seraphim::platform::canvas_selector};
 };
 
 } // namespace
@@ -45,7 +48,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
     SDL_GetWindowSizeInPixels(window.get(), &width, &height);
     log::info("Window created at {}x{} pixels", width, height);
 
-    *appstate = std::make_unique<app_state>(std::move(window)).release();
+    auto state = std::make_unique<app_state>(std::move(window));
+    state->renderer.resize(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+    *appstate = state.release();
     return SDL_APP_CONTINUE;
 }
 
@@ -60,6 +65,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     if (ticks > 0)
         state.input.end_frame();
 
+    state.renderer.render();
     return SDL_APP_CONTINUE;
 }
 
@@ -68,7 +74,12 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
     if (event->type == SDL_EVENT_QUIT)
         return SDL_APP_SUCCESS;
 
-    static_cast<app_state*>(appstate)->input.handle(*event);
+    auto& state = *static_cast<app_state*>(appstate);
+    if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED)
+        state.renderer.resize(static_cast<std::uint32_t>(event->window.data1),
+                              static_cast<std::uint32_t>(event->window.data2));
+
+    state.input.handle(*event);
     return SDL_APP_CONTINUE;
 }
 
