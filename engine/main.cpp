@@ -1,7 +1,7 @@
-#include <iostream>
+#include "core/log.hpp"
 
 int main()
 {
-    std::cout << "Hello, World!" << std::endl;
+    seraphim::log::info("Seraphim started");
     return 0;
 }
