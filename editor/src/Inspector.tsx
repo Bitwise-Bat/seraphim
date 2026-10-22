@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
+import { useStore } from 'zustand'
 import { useAssetFileDrop } from './asset_drag'
 import { find_file_by_id } from './project/assets'
-import { useAssetStore } from './project/asset_store'
+import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import {
   component_defaults,
   type BodyType,
@@ -12,6 +13,7 @@ import {
   type Rigidbody,
   type SceneDocument,
   type SceneEntity,
+  type Scripts,
   type Sprite,
   type Transform,
 } from './project/scene_document'
@@ -151,18 +153,27 @@ function to_hex(channel: number): string {
     .padStart(2, '0')
 }
 
-function TextureField({ texture, on_change }: { texture: string; on_change: (texture: string) => void }) {
-  const root = useAssetStore((store) => store.root)
-  const drop = useAssetFileDrop(on_change)
-  const file = root && texture ? find_file_by_id(root, texture) : undefined
-  const label = !texture ? 'Drop an image here' : (file?.path ?? `Missing asset ${texture}`)
+type AssetFieldProps = {
+  store: AssetStoreHook
+  // Empty when no asset is set.
+  asset: string
+  placeholder: string
+  clear_label?: string
+  on_change: (asset: string) => void
+}
+
+function AssetField({ store, asset, placeholder, clear_label = 'Clear', on_change }: AssetFieldProps) {
+  const root = useStore(store, (state) => state.root)
+  const drop = useAssetFileDrop(store, on_change)
+  const file = root && asset ? find_file_by_id(root, asset) : undefined
+  const label = !asset ? placeholder : (file?.path ?? `Missing asset ${asset}`)
 
   return (
-    <div className={`texture-field${drop.active ? ' drop-target' : ''}`} title={file?.path} {...drop.handlers}>
-      <span className={file ? 'texture-name' : 'texture-name panel-hint'}>{label}</span>
-      {texture && (
+    <div className={`asset-field${drop.active ? ' drop-target' : ''}`} title={file?.path} {...drop.handlers}>
+      <span className={file ? 'asset-field-name' : 'asset-field-name panel-hint'}>{label}</span>
+      {asset && (
         <button type="button" className="toolbar-button" onClick={() => on_change('')}>
-          Clear
+          {clear_label}
         </button>
       )}
     </div>
@@ -174,7 +185,12 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
   return (
     <>
       <Row label="Texture">
-        <TextureField texture={value.texture} on_change={(texture) => on_change({ ...value, texture })} />
+        <AssetField
+          store={useAssetStore}
+          asset={value.texture}
+          placeholder="Drop an image here"
+          on_change={(texture) => on_change({ ...value, texture })}
+        />
       </Row>
       <Row label="Size">
         <VectorFields labels={['W', 'H']} values={value.size} on_change={(size) => on_change({ ...value, size })} />
@@ -298,11 +314,42 @@ function ColliderFields({ value, on_change }: { value: Collider; on_change: (val
   )
 }
 
+function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value: Scripts) => void }) {
+  return (
+    <div className="inspector-list">
+      {value.assets.map((asset, index) => (
+        <AssetField
+          // The same script may be listed twice, so the position tells the rows apart.
+          key={index}
+          store={useScriptStore}
+          asset={asset}
+          placeholder="Drop a script here"
+          clear_label="Remove"
+          on_change={(replacement) =>
+            on_change({
+              assets: replacement
+                ? value.assets.with(index, replacement)
+                : value.assets.filter((_, other) => other !== index),
+            })
+          }
+        />
+      ))}
+      <AssetField
+        store={useScriptStore}
+        asset=""
+        placeholder="Drop a script here to add it"
+        on_change={(added) => on_change({ assets: [...value.assets, added] })}
+      />
+    </div>
+  )
+}
+
 const component_titles: Record<ComponentName, string> = {
   transform: 'Transform',
   sprite: 'Sprite',
   rigidbody: 'Rigidbody',
   collider: 'Collider',
+  scripts: 'Scripts',
 }
 
 type ComponentSectionProps = {
@@ -327,7 +374,7 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite, rigidbody, collider } = entity.components
+  const { transform, sprite, rigidbody, collider, scripts } = entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -368,6 +415,11 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
       {collider && (
         <ComponentSection name="collider" on_remove={() => set_component('collider', undefined)}>
           <ColliderFields value={collider} on_change={(value) => set_component('collider', value)} />
+        </ComponentSection>
+      )}
+      {scripts && (
+        <ComponentSection name="scripts" on_remove={() => set_component('scripts', undefined)}>
+          <ScriptFields value={scripts} on_change={(value) => set_component('scripts', value)} />
         </ComponentSection>
       )}
       {missing.length > 0 && (

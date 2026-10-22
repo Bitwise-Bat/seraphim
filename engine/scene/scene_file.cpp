@@ -62,6 +62,17 @@ bool read(const json& value, std::string& out)
     return true;
 }
 
+bool read(const json& value, std::vector<std::string>& out)
+{
+    if (!value.is_array())
+        return false;
+    out.clear();
+    for (const json& item : value)
+        if (!read(item, out.emplace_back()))
+            return false;
+    return true;
+}
+
 template <glm::length_t Length>
 bool read(const json& value, glm::vec<Length, float>& out)
 {
@@ -180,6 +191,14 @@ std::optional<collider> read_collider(const json& value)
     return out;
 }
 
+std::optional<scripts> read_scripts(const json& value)
+{
+    scripts out;
+    if (!value.is_object() || !read_field(value, "assets", out.assets))
+        return std::nullopt;
+    return out;
+}
+
 std::expected<void, std::string> read_entity(scene& scene, const json& value)
 {
     if (!value.is_object())
@@ -230,6 +249,13 @@ std::expected<void, std::string> read_entity(scene& scene, const json& value)
             if (!parsed)
                 return std::unexpected(std::format("Entity '{}' has an invalid collider", id));
             registry.emplace<collider>(entity, *parsed);
+        }
+        else if (key == "scripts")
+        {
+            auto parsed = read_scripts(component);
+            if (!parsed)
+                return std::unexpected(std::format("Entity '{}' has an invalid script list", id));
+            registry.emplace<scripts>(entity, std::move(*parsed));
         }
         else
         {
@@ -307,6 +333,8 @@ std::string serialize_scene(const scene& scene)
                 {"restitution", shape->restitution},
                 {"sensor", shape->sensor},
             };
+        if (const auto* list = registry.try_get<scripts>(entity))
+            components["scripts"] = {{"assets", list->assets}};
 
         entities.push_back({{"id", id}, {"name", name}, {"components", std::move(components)}});
     }

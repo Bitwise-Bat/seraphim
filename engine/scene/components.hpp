@@ -6,6 +6,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 #include <string>
+#include <vector>
 
 namespace seraphim::scene
 {
@@ -75,6 +76,12 @@ struct collider
     float restitution = 0.0F;
     // Detects overlaps without colliding.
     bool sensor = false;
+};
+
+// Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.
+struct scripts
+{
+    std::vector<std::string> assets;
 };
 
 } // namespace seraphim::scene

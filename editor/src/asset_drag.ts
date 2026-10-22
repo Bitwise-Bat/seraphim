@@ -1,7 +1,8 @@
 import { useState, type DragEvent } from 'react'
+import { useStore } from 'zustand'
 import { useBrowserStore } from './asset_browser_context'
-import { assets_folder, find_folder, type AssetEntry } from './project/assets'
-import { useAssetStore } from './project/asset_store'
+import { find_folder, type AssetEntry } from './project/assets'
+import type { AssetStoreHook } from './project/asset_store'
 
 // A private type keeps asset drags apart from files dragged in from the operating system. Naming the project folder in
 // it lets drop targets turn away another folder's files during dragover, when the payload cannot be read yet.
@@ -20,11 +21,13 @@ export function start_asset_drag(event: DragEvent, folder: string, asset: Dragge
   event.dataTransfer.effectAllowed = 'linkMove'
 }
 
-// Drop handlers for fields that reference a file asset, such as a sprite's texture. Folders are not accepted.
-export function useAssetFileDrop(on_drop: (id: string) => void) {
-  const root = useAssetStore((store) => store.root)
+// Drop handlers for fields that reference a file from one project folder, such as a sprite's texture. Folders are not
+// accepted.
+export function useAssetFileDrop(store: AssetStoreHook, on_drop: (id: string) => void) {
+  const root = useStore(store, (state) => state.root)
+  const folder = useStore(store, (state) => state.folder)
   const [active, set_active] = useState(false)
-  const type = drag_type(assets_folder)
+  const type = drag_type(folder)
 
   return {
     active,

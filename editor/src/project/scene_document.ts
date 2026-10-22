@@ -41,11 +41,17 @@ export type Collider = {
   sensor: boolean
 }
 
+// Asset ids of the scripts that drive the entity, run in list order.
+export type Scripts = {
+  assets: string[]
+}
+
 export type Components = {
   transform?: Transform
   sprite?: Sprite
   rigidbody?: Rigidbody
   collider?: Collider
+  scripts?: Scripts
 }
 
 export type ComponentName = keyof Components
@@ -77,4 +83,5 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     restitution: 0,
     sensor: false,
   }),
+  scripts: () => ({ assets: [] }),
 }

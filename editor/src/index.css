@@ -440,7 +440,7 @@ button:focus-visible,
   padding: 0;
 }
 
-.texture-field {
+.asset-field {
   display: flex;
   flex: 1;
   gap: 0.375rem;
@@ -452,11 +452,17 @@ button:focus-visible,
   font-size: 0.8rem;
 }
 
-.texture-name {
+.asset-field-name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.inspector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
 }
 
 .inspector-add {
