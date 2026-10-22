@@ -27,6 +27,7 @@ struct app_state
     seraphim::render::renderer renderer{seraphim::platform::canvas_selector};
     // Created once the renderer has a device, since uploading textures needs one.
     std::optional<seraphim::asset::asset_manager> assets;
+    seraphim::render::camera2d camera;
 };
 
 } // namespace
@@ -69,12 +70,15 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     if (ticks > 0)
         state.input.end_frame();
 
+    state.renderer.poll();
     if (!state.assets && state.renderer.device())
         state.assets.emplace(state.renderer.device());
-    if (state.assets)
-        state.assets->update();
+    if (!state.assets)
+        return SDL_APP_CONTINUE;
 
-    state.renderer.render();
+    state.assets->update();
+    state.renderer.begin(state.camera);
+    state.renderer.end(*state.assets);
     return SDL_APP_CONTINUE;
 }
 

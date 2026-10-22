@@ -1,7 +1,17 @@
 #pragma once
 
+#include "render/camera2d.hpp"
+#include "render/sprite.hpp"
+#include "render/sprite_renderer.hpp"
+
 #include <cstdint>
+#include <optional>
 #include <webgpu/webgpu_cpp.h>
+
+namespace seraphim::asset
+{
+class asset_manager;
+}
 
 namespace seraphim::render
 {
@@ -16,7 +26,14 @@ class renderer
     renderer& operator=(const renderer&) = delete;
 
     void resize(std::uint32_t width, std::uint32_t height);
-    void render();
+
+    // Delivers pending GPU callbacks, including the device once the browser grants it.
+    void poll();
+
+    void begin(const camera2d& camera);
+    void draw(const sprite& item);
+    // Clears the canvas and draws everything submitted since begin().
+    void end(const asset::asset_manager& assets);
 
     // Null until the browser has granted a device.
     [[nodiscard]] const wgpu::Device& device() const { return m_device; }
@@ -31,6 +48,7 @@ class renderer
     wgpu::Adapter m_adapter;
     wgpu::Device m_device;
     wgpu::TextureFormat m_format = wgpu::TextureFormat::Undefined;
+    std::optional<sprite_renderer> m_sprites;
     std::uint32_t m_width = 0;
     std::uint32_t m_height = 0;
 };

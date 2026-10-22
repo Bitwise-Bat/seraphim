@@ -23,7 +23,7 @@ renderer::renderer(const char* canvas_selector) : m_instance(wgpu::CreateInstanc
     surface_descriptor.nextInChain = &canvas;
     m_surface = m_instance.CreateSurface(&surface_descriptor);
 
-    // AllowProcessEvents defers callbacks to render(), so they can never run after this object is gone.
+    // AllowProcessEvents defers callbacks to poll(), so they can never run after this object is gone.
     m_instance.RequestAdapter(nullptr, wgpu::CallbackMode::AllowProcessEvents,
                               [this](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView message)
                               {
@@ -62,6 +62,7 @@ void renderer::request_device()
                                 wgpu::SurfaceCapabilities capabilities;
                                 m_surface.GetCapabilities(m_adapter, &capabilities);
                                 m_format = capabilities.formats[0];
+                                m_sprites.emplace(m_device, m_format);
 
                                 log::info("GPU device ready");
                                 configure_surface();
@@ -93,9 +94,28 @@ bool renderer::is_configured() const
     return m_device && m_width > 0 && m_height > 0;
 }
 
-void renderer::render()
+void renderer::poll()
 {
     m_instance.ProcessEvents();
+}
+
+void renderer::begin(const camera2d& camera)
+{
+    if (!m_sprites)
+        return;
+
+    const float aspect = m_height > 0 ? static_cast<float>(m_width) / static_cast<float>(m_height) : 1.0F;
+    m_sprites->begin(camera.view_projection(aspect));
+}
+
+void renderer::draw(const sprite& item)
+{
+    if (m_sprites)
+        m_sprites->draw(item);
+}
+
+void renderer::end(const asset::asset_manager& assets)
+{
     if (!is_configured())
         return;
 
@@ -116,7 +136,9 @@ void renderer::render()
     pass_descriptor.colorAttachments = &color_attachment;
 
     const wgpu::CommandEncoder encoder = m_device.CreateCommandEncoder();
-    encoder.BeginRenderPass(&pass_descriptor).End();
+    const wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&pass_descriptor);
+    m_sprites->flush(pass, assets);
+    pass.End();
     const wgpu::CommandBuffer commands = encoder.Finish();
     // No Present(): the browser shows the canvas once the animation frame callback returns.
     m_device.GetQueue().Submit(1, &commands);
