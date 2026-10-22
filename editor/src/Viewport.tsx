@@ -10,5 +10,15 @@ export function Viewport() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!canvas.current) {
+      return
+    }
+    // SDL only resizes the canvas backing store on window resize events, so panel resizes are forwarded as one.
+    const observer = new ResizeObserver(() => window.dispatchEvent(new Event('resize')))
+    observer.observe(canvas.current)
+    return () => observer.disconnect()
+  }, [])
+
   return <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport" />
 }
