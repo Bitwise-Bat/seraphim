@@ -1,6 +1,10 @@
 #pragma once
 
 #include <box2d/id.h>
+#include <entt/entity/entity.hpp>
+#include <glm/vec2.hpp>
+#include <optional>
+#include <unordered_map>
 
 namespace seraphim::scene
 {
@@ -23,8 +27,14 @@ class physics_system
     // Advances the world and writes the moved bodies back to their transforms.
     void step(scene& scene, float seconds);
 
+    [[nodiscard]] std::optional<glm::vec2> get_velocity(entt::entity entity) const;
+    void set_velocity(entt::entity entity, glm::vec2 velocity);
+
+    [[nodiscard]] bool has_body(entt::entity id) const;
+
   private:
     b2WorldId m_world;
+    std::unordered_map<entt::entity, b2BodyId> m_bodies;
 };
 
 } // namespace seraphim::scene

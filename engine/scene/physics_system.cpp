@@ -99,6 +99,8 @@ physics_system::physics_system(scene& scene)
         }
 
         const b2BodyId id = b2CreateBody(m_world, &body_def);
+        m_bodies.emplace(entity, id);
+
         create_shape(id, shape, pose.scale);
     }
 }
@@ -125,4 +127,31 @@ void physics_system::step(scene& scene, float seconds)
     }
 }
 
+std::optional<glm::vec2> physics_system::get_velocity(entt::entity entity) const
+{
+    const auto body = m_bodies.find(entity);
+    if (body == m_bodies.end())
+        return std::nullopt;
+
+    const auto velocity = b2Body_GetLinearVelocity(body->second);
+    return glm::vec2{velocity.x, velocity.y};
+}
+
+void physics_system::set_velocity(entt::entity entity, glm::vec2 velocity)
+{
+    const auto body = m_bodies.find(entity);
+    if (body == m_bodies.end())
+        return;
+
+    b2Body_SetLinearVelocity(body->second, b2Vec2{velocity.x, velocity.y});
+}
+
+bool physics_system::has_body(entt::entity id) const
+{
+    const auto body = m_bodies.find(id);
+    if (body == m_bodies.end())
+        return false;
+
+    return b2Body_IsValid(body->second);
+}
 } // namespace seraphim::scene
