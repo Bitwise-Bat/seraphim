@@ -167,7 +167,7 @@ void sprite_renderer::flush(const wgpu::RenderPassEncoder& pass, const asset::as
 
     for (const batch& run : m_batches)
     {
-        // Rebuilt every frame instead of cached: a texture can be unloaded and its slot reused at any time.
+        // Rebuilt every frame instead of cached: a texture is replaced when it finishes loading or reloads.
         wgpu::BindGroupEntry entry{};
         entry.binding = 0;
         entry.textureView = assets.texture(run.texture).view();

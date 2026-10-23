@@ -32,105 +32,62 @@ asset_manager::asset_manager(wgpu::Device device, asset_sources& sources)
 
 texture_handle asset_manager::load_texture(const std::string& id)
 {
-    if (const auto existing = m_handles_by_id.find(id); existing != m_handles_by_id.end())
-        return existing->second;
+    if (const texture_handle existing = m_textures.find(id); existing.valid())
+        return existing;
 
-    std::uint32_t index = 0;
-    if (m_free_slots.empty())
-    {
-        index = static_cast<std::uint32_t>(m_slots.size());
-        m_slots.emplace_back();
-    }
-    else
-    {
-        index = m_free_slots.back();
-        m_free_slots.pop_back();
-    }
-
-    texture_slot& slot = m_slots[index];
-    slot.id = id;
-    slot.in_use = true;
-
-    const texture_handle handle{index, slot.generation};
-    m_handles_by_id.emplace(id, handle);
+    const texture_handle handle = m_textures.add(id);
+    m_texture_requests.resize(handle.index + 1);
     request(handle);
     return handle;
 }
 
-void asset_manager::unload(texture_handle handle)
-{
-    if (!find(handle))
-        return;
-
-    texture_slot& slot = m_slots[handle.index];
-    m_handles_by_id.erase(slot.id);
-    std::erase_if(m_pending, [handle](const auto& entry) { return entry.second == handle; });
-
-    slot.id.clear();
-    slot.texture.reset();
-    slot.request.reset();
-    slot.in_use = false;
-    ++slot.generation;
-    m_free_slots.push_back(handle.index);
-}
-
 const render::texture2d& asset_manager::texture(texture_handle handle) const
 {
-    const texture_slot* slot = find(handle);
-    return slot && slot->texture ? *slot->texture : m_placeholder;
+    const render::texture2d* loaded = m_textures.get(handle);
+    return loaded ? *loaded : m_placeholder;
 }
 
 void asset_manager::update()
 {
     for (const std::string& id : m_sources.take_changed())
     {
-        if (const auto handle = m_handles_by_id.find(id); handle != m_handles_by_id.end())
-            request(handle->second);
+        if (const texture_handle handle = m_textures.find(id); handle.valid())
+            request(handle);
     }
 
     for (auto& [finished, result] : take_finished_images())
     {
         const auto pending = m_pending.find(finished);
-        // Unloaded while the request was in flight.
         if (pending == m_pending.end())
             continue;
 
         const texture_handle handle = pending->second;
         m_pending.erase(pending);
-        texture_slot& slot = m_slots[handle.index];
+        std::optional<image_request>& latest = m_texture_requests[handle.index];
 
-        if (slot.request != finished)
+        if (latest != finished)
             continue;
-        slot.request.reset();
+        latest.reset();
 
         // A failed reload keeps showing the previous texture rather than the placeholder.
         if (!result)
             continue;
 
-        slot.texture.emplace(m_device, result->width, result->height, result->rgba);
-        log::info("Loaded texture '{}' ({}x{})", slot.id, result->width, result->height);
+        m_textures.set(handle, {m_device, result->width, result->height, result->rgba});
+        log::info("Loaded texture '{}' ({}x{})", m_textures.uuid(handle), result->width, result->height);
     }
 }
 
 void asset_manager::request(texture_handle handle)
 {
-    texture_slot& slot = m_slots[handle.index];
     // Without a source yet, the texture is requested once the host registers one.
-    const std::string* url = m_sources.find(slot.id);
+    const std::string* url = m_sources.find(m_textures.uuid(handle));
     if (!url)
         return;
 
-    slot.request = request_image(*url);
-    m_pending.emplace(*slot.request, handle);
-}
-
-const asset_manager::texture_slot* asset_manager::find(texture_handle handle) const
-{
-    if (handle.index >= m_slots.size())
-        return nullptr;
-
-    const texture_slot& slot = m_slots[handle.index];
-    return slot.in_use && slot.generation == handle.generation ? &slot : nullptr;
+    std::optional<image_request>& latest = m_texture_requests[handle.index];
+    latest = request_image(*url);
+    m_pending.emplace(*latest, handle);
 }
 
 } // namespace seraphim::asset

@@ -20,7 +20,7 @@ void sprite_system::draw(scene& scene, asset::asset_manager& assets, render::ren
     m_items.clear();
     for (const auto [entity, transform, sprite] : view.each())
     {
-        if (sprite.handle == asset::texture_handle{} && !sprite.texture.empty())
+        if (!sprite.handle.valid() && !sprite.texture.empty())
             sprite.handle = assets.load_texture(sprite.texture);
         m_items.push_back({
             .order = sprite.order,
