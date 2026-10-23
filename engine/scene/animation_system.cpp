@@ -8,10 +8,11 @@
 namespace seraphim::scene
 {
 
-void animation_system::resolve(entt::registry& registry, const asset::asset_manager& assets)
+void animation_system::resolve(entt::registry& registry, asset::asset_manager& assets)
 {
     for (const auto [entity, state] : registry.view<animator>().each())
-        state.handle = assets.find_animation_set(state.animation_set);
+        if (!state.animation_set.empty())
+            state.handle = assets.load_animation_set(state.animation_set);
 }
 
 void animation_system::update(entt::registry& registry, const asset::asset_manager& assets, float dt)

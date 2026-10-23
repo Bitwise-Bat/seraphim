@@ -14,8 +14,8 @@ namespace seraphim::scene
 class animation_system
 {
   public:
-    // Looks up the animation set of every animator, so update() does not search by id each tick.
-    static void resolve(entt::registry& registry, const asset::asset_manager& assets);
+    // Loads the animation set of every animator, so update() does not search by id each tick.
+    static void resolve(entt::registry& registry, asset::asset_manager& assets);
 
     static void update(entt::registry& registry, const asset::asset_manager& assets, float dt);
 };
