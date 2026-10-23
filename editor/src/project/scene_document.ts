@@ -26,6 +26,13 @@ export type Rigidbody = {
   fixed_rotation: boolean
 }
 
+export type Animator = {
+  // Asset id of the animation set, or empty for none.
+  animation_set: string
+  // Name of the clip that plays when the scene starts.
+  clip: string
+}
+
 export type ColliderShape = 'box' | 'circle'
 
 // Without a rigidbody the collider is static. Sizes are in world units before the transform's scale.
@@ -51,6 +58,7 @@ export type Components = {
   sprite?: Sprite
   rigidbody?: Rigidbody
   collider?: Collider
+  animator?: Animator
   scripts?: Scripts
 }
 
@@ -83,5 +91,6 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     restitution: 0,
     sensor: false,
   }),
+  animator: () => ({ animation_set: '', clip: '' }),
   scripts: () => ({ assets: [] }),
 }

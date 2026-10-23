@@ -5,6 +5,7 @@ import { find_file_by_id } from './project/assets'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import {
   component_defaults,
+  type Animator,
   type BodyType,
   type Collider,
   type ColliderShape,
@@ -314,6 +315,29 @@ function ColliderFields({ value, on_change }: { value: Collider; on_change: (val
   )
 }
 
+function AnimatorFields({ value, on_change }: { value: Animator; on_change: (value: Animator) => void }) {
+  return (
+    <>
+      <Row label="Animation set">
+        <AssetField
+          store={useAssetStore}
+          asset={value.animation_set}
+          placeholder="Drop an animation set here"
+          on_change={(animation_set) => on_change({ ...value, animation_set })}
+        />
+      </Row>
+      <label className="inspector-row">
+        <span className="inspector-label">Clip</span>
+        <input
+          className="inspector-name"
+          value={value.clip}
+          onChange={(event) => on_change({ ...value, clip: event.target.value })}
+        />
+      </label>
+    </>
+  )
+}
+
 function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value: Scripts) => void }) {
   return (
     <div className="inspector-list">
@@ -349,6 +373,7 @@ const component_titles: Record<ComponentName, string> = {
   sprite: 'Sprite',
   rigidbody: 'Rigidbody',
   collider: 'Collider',
+  animator: 'Animator',
   scripts: 'Scripts',
 }
 
@@ -374,7 +399,7 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite, rigidbody, collider, scripts } = entity.components
+  const { transform, sprite, rigidbody, collider, animator, scripts } = entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -415,6 +440,11 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
       {collider && (
         <ComponentSection name="collider" on_remove={() => set_component('collider', undefined)}>
           <ColliderFields value={collider} on_change={(value) => set_component('collider', value)} />
+        </ComponentSection>
+      )}
+      {animator && (
+        <ComponentSection name="animator" on_remove={() => set_component('animator', undefined)}>
+          <AnimatorFields value={animator} on_change={(value) => set_component('animator', value)} />
         </ComponentSection>
       )}
       {scripts && (
