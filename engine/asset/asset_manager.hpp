@@ -4,9 +4,11 @@
 #include "asset/asset_sources.hpp"
 #include "asset/asset_store.hpp"
 #include "asset/image_loader.hpp"
+#include "asset/sound.hpp"
 #include "asset/text_loader.hpp"
 #include "asset/texture_handle.hpp"
 #include "asset/tileset.hpp"
+#include "platform/audio.hpp"
 #include "render/texture2d.hpp"
 
 #include <optional>
@@ -40,6 +42,11 @@ class asset_manager
     // Null while the tileset is loading, if it failed, or if the handle is invalid.
     [[nodiscard]] const tileset* get_tileset(tileset_handle handle) const;
 
+    // Works like load_texture.
+    [[nodiscard]] sound_handle load_sound(const std::string& id);
+    // Null while the sound is loading, if it failed, or if the handle is invalid.
+    [[nodiscard]] const sound* get_sound(sound_handle handle) const;
+
     // Requests assets whose source changed and stores the ones that finished loading since the last call.
     void update();
 
@@ -54,6 +61,7 @@ class asset_manager
     };
 
     void request(texture_handle handle);
+    void request(sound_handle handle);
     template <typename T>
     [[nodiscard]] handle<T> load(text_assets<T>& assets, const std::string& id);
     template <typename T>
@@ -61,6 +69,7 @@ class asset_manager
     template <typename T>
     void request_changed(text_assets<T>& assets, const std::string& id);
     void finish_images();
+    void finish_sounds();
     void finish_texts();
     // Returns whether the request is the newest one for the asset, and so may replace it.
     template <typename T>
@@ -76,6 +85,10 @@ class asset_manager
     // a newer one.
     std::vector<std::optional<image_request>> m_texture_requests;
     std::unordered_map<image_request, texture_handle> m_pending_images;
+    asset_store<sound> m_sounds;
+    // Indexed like the sound slots, for the same reason as m_texture_requests.
+    std::vector<std::optional<platform::sound_request>> m_sound_requests;
+    std::unordered_map<platform::sound_request, sound_handle> m_pending_sounds;
     text_assets<animation_set> m_animation_sets;
     text_assets<tileset> m_tilesets;
     std::unordered_map<text_request, std::variant<animation_set_handle, tileset_handle>> m_pending_texts;

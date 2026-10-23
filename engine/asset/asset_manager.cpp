@@ -69,16 +69,35 @@ const tileset* asset_manager::get_tileset(tileset_handle handle) const
     return m_tilesets.store.get(handle);
 }
 
+sound_handle asset_manager::load_sound(const std::string& id)
+{
+    if (const sound_handle existing = m_sounds.find(id); existing.valid())
+        return existing;
+
+    const sound_handle handle = m_sounds.add(id);
+    m_sound_requests.resize(handle.index + 1);
+    request(handle);
+    return handle;
+}
+
+const sound* asset_manager::get_sound(sound_handle handle) const
+{
+    return m_sounds.get(handle);
+}
+
 void asset_manager::update()
 {
     for (const std::string& id : m_sources.take_changed())
     {
         if (const texture_handle handle = m_textures.find(id); handle.valid())
             request(handle);
+        if (const sound_handle handle = m_sounds.find(id); handle.valid())
+            request(handle);
         request_changed(m_animation_sets, id);
         request_changed(m_tilesets, id);
     }
     finish_images();
+    finish_sounds();
     finish_texts();
 }
 
@@ -104,6 +123,36 @@ void asset_manager::finish_images()
 
         m_textures.set(handle, {m_device, result->width, result->height, result->rgba});
         log::info("Loaded texture '{}' ({}x{})", m_textures.uuid(handle), result->width, result->height);
+    }
+}
+
+void asset_manager::finish_sounds()
+{
+    for (const auto [finished, loaded] : platform::take_finished_sounds())
+    {
+        const auto pending = m_pending_sounds.find(finished);
+        if (pending == m_pending_sounds.end())
+            continue;
+
+        const sound_handle handle = pending->second;
+        m_pending_sounds.erase(pending);
+        std::optional<platform::sound_request>& latest = m_sound_requests[handle.index];
+        const bool newest = latest == finished;
+        if (newest)
+            latest.reset();
+
+        // Like textures, a failed reload keeps the previous sound.
+        if (!newest || !loaded)
+        {
+            if (loaded)
+                platform::release_sound(finished);
+            continue;
+        }
+
+        if (const sound* previous = m_sounds.get(handle))
+            platform::release_sound(previous->samples);
+        m_sounds.set(handle, {finished});
+        log::info("Loaded sound '{}'", m_sounds.uuid(handle));
     }
 }
 
@@ -166,6 +215,17 @@ void asset_manager::request(texture_handle handle)
     std::optional<image_request>& latest = m_texture_requests[handle.index];
     latest = request_image(*url);
     m_pending_images.emplace(*latest, handle);
+}
+
+void asset_manager::request(sound_handle handle)
+{
+    const std::string* url = m_sources.find(m_sounds.uuid(handle));
+    if (!url)
+        return;
+
+    std::optional<platform::sound_request>& latest = m_sound_requests[handle.index];
+    latest = platform::request_sound(*url);
+    m_pending_sounds.emplace(*latest, handle);
 }
 
 template <typename T>
