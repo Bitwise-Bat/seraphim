@@ -211,6 +211,15 @@ std::optional<animator> read_animator(const json& value)
     return out;
 }
 
+std::optional<audio_source> read_audio_source(const json& value)
+{
+    audio_source out;
+    if (!value.is_object() || !read_field(value, "sound", out.sound) || !read_field(value, "volume", out.volume) ||
+        !read_field(value, "loop", out.loop) || !read_field(value, "play_on_start", out.play_on_start))
+        return std::nullopt;
+    return out;
+}
+
 // A row is the tile numbers of one line of the map, separated by spaces.
 bool read_row(std::string_view text, std::uint32_t width, std::vector<std::uint16_t>& out)
 {
@@ -353,6 +362,13 @@ std::expected<void, std::string> read_entity(scene& scene, const json& value)
                 return std::unexpected(std::format("Entity '{}' has an invalid animator", id));
             registry.emplace<animator>(entity, std::move(*parsed));
         }
+        else if (key == "audio_source")
+        {
+            auto parsed = read_audio_source(component);
+            if (!parsed)
+                return std::unexpected(std::format("Entity '{}' has an invalid audio source", id));
+            registry.emplace<audio_source>(entity, std::move(*parsed));
+        }
         else if (key == "tilemap")
         {
             auto parsed = read_tilemap(component);
@@ -445,6 +461,13 @@ std::string serialize_scene(const scene& scene)
             };
         if (const auto* player = registry.try_get<animator>(entity))
             components["animator"] = {{"animation_set", player->animation_set}, {"clip", player->clip}};
+        if (const auto* source = registry.try_get<audio_source>(entity))
+            components["audio_source"] = {
+                {"sound", source->sound},
+                {"volume", source->volume},
+                {"loop", source->loop},
+                {"play_on_start", source->play_on_start},
+            };
         if (const auto* map = registry.try_get<tilemap>(entity))
         {
             json layers = json::array();

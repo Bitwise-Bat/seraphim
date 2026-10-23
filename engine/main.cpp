@@ -3,10 +3,12 @@
 #include "core/fixed_timestep.hpp"
 #include "core/log.hpp"
 #include "core/version.hpp"
+#include "platform/audio.hpp"
 #include "platform/input.hpp"
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
 #include "scene/animation_system.hpp"
+#include "scene/audio_system.hpp"
 #include "scene/components.hpp"
 #include "scene/navigator_grid.hpp"
 #include "scene/physics_system.hpp"
@@ -73,11 +75,15 @@ struct engine_api
         auto scene = seraphim::scene::parse_scene(json);
         if (!scene)
             return std::move(scene.error());
-        // The bodies belong to the old scene's entities.
+        // The bodies and voices belong to the old scene's entities.
         g_app->physics.reset();
+        seraphim::platform::stop_all_voices();
         g_app->scene = std::move(*scene);
         if (g_app->assets)
+        {
             seraphim::scene::animation_system::resolve(g_app->scene.registry(), *g_app->assets);
+            seraphim::scene::audio_system::resolve(g_app->scene.registry(), *g_app->assets);
+        }
         return {};
     }
 
@@ -86,6 +92,8 @@ struct engine_api
         if (!g_app)
             return;
         g_app->physics.emplace(g_app->scene);
+        if (g_app->assets)
+            seraphim::scene::audio_system::start(g_app->scene.registry(), *g_app->assets);
     }
 
     static void stop_simulation()
@@ -93,6 +101,7 @@ struct engine_api
         if (!g_app)
             return;
         g_app->physics.reset();
+        seraphim::platform::stop_all_voices();
     }
 
     // Ticks are fixed, so this is the same for every tick.
@@ -524,7 +533,10 @@ SDL_AppResult SDL_AppIterate(void* appstate)
                 state.tick_handler();
             state.physics->step(state.scene, tick_seconds);
             if (state.assets)
+            {
                 seraphim::scene::animation_system::update(state.scene.registry(), *state.assets, tick_seconds);
+                seraphim::scene::audio_system::update(state.scene.registry(), *state.assets);
+            }
         }
         // Edges belong to the first tick only, so a single press cannot fire twice when a slow frame runs several
         // ticks. With no tick this frame they are kept for the next one.
@@ -538,6 +550,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
         state.assets.emplace(state.renderer.device(), state.sources);
         // A scene loaded before the GPU was ready has not been resolved yet.
         seraphim::scene::animation_system::resolve(state.scene.registry(), *state.assets);
+        seraphim::scene::audio_system::resolve(state.scene.registry(), *state.assets);
     }
     if (!state.assets)
         return SDL_APP_CONTINUE;

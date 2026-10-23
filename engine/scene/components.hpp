@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/animation_set.hpp"
+#include "asset/sound.hpp"
 #include "asset/texture_handle.hpp"
 #include "asset/tileset.hpp"
 
@@ -8,6 +9,7 @@
 #include <cstdint>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -111,6 +113,22 @@ struct tilemap
     std::vector<std::vector<std::uint16_t>> layers;
     // Sorted together with sprite orders, so sprites can stand in front of or behind the whole map.
     std::int32_t order = 0;
+};
+
+// Plays a sound while the scene is simulated.
+struct audio_source
+{
+    // Asset id of the sound.
+    std::string sound;
+    // Resolved from the asset id when the scene loads.
+    asset::sound_handle handle;
+    // 1 plays the sound as recorded.
+    float volume = 1.0F;
+    bool loop = false;
+    bool play_on_start = false;
+    // Set while a play waits for the sound to finish loading.
+    bool pending = false;
+    std::optional<platform::voice> voice;
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.
