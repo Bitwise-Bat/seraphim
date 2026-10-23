@@ -269,55 +269,34 @@ struct engine_api
         return g_app->physics->has_body(entity);
     }
 
-    static std::optional<std::string> get_clip(const std::string& entity_id)
+    // Returns nothing when the entity does not exist or has no animator.
+    static std::optional<std::string> get_clip(const std::string& id)
     {
         if (!g_app)
             return std::nullopt;
-
-        const entt::entity entity = g_app->scene.find(entity_id);
-        if (entity == entt::null)
+        const auto* player = g_app->scene.registry().try_get<seraphim::scene::animator>(g_app->scene.find(id));
+        if (!player)
             return std::nullopt;
-
-        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
-        {
-            return animator.clip;
-        }
-
-        return std::nullopt;
+        return player->clip;
     }
 
-    static void set_clip(const std::string& entity_id, const std::string& clip)
+    static void set_clip(const std::string& id, const std::string& clip)
     {
         if (!g_app)
             return;
-
-        const entt::entity entity = g_app->scene.find(entity_id);
-        if (entity == entt::null)
+        auto* player = g_app->scene.registry().try_get<seraphim::scene::animator>(g_app->scene.find(id));
+        // Setting the playing clip again, as scripts do every tick, must not restart it.
+        if (!player || player->clip == clip)
             return;
-
-        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
-        {
-            animator.clip = clip;
-            break;
-        }
+        player->clip = clip;
+        player->frame = 0;
+        player->elapsed = 0.0F;
     }
 
-    static bool has_animator(const std::string& entity_id)
+    static bool has_animator(const std::string& id)
     {
-        if (!g_app)
-            return false;
-
-        const entt::entity entity = g_app->scene.find(entity_id);
-        if (entity == entt::null)
-            return false;
-
-        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
-        {
-            return true;
-        }
-
-        return false;
-    };
+        return g_app && g_app->scene.registry().all_of<seraphim::scene::animator>(g_app->scene.find(id));
+    }
 
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
