@@ -58,6 +58,34 @@ export function create_api(engine: MainModule) {
     }
   }
 
+  class AudioSource {
+    private readonly id: string
+
+    constructor(id: string) {
+      this.id = id
+    }
+
+    get playing(): boolean {
+      return api.is_audio_playing(this.id)
+    }
+
+    get volume(): number {
+      return api.get_audio_volume(this.id)
+    }
+
+    set volume(volume: number) {
+      api.set_audio_volume(this.id, volume)
+    }
+
+    play(): void {
+      api.play_audio(this.id)
+    }
+
+    stop(): void {
+      api.stop_audio(this.id)
+    }
+  }
+
   class Tilemap {
     private readonly id: string
 
@@ -88,6 +116,7 @@ export function create_api(engine: MainModule) {
     #body: Body | undefined | null
     #animator: Animator | undefined | null
     #tilemap: Tilemap | undefined | null
+    #audio: AudioSource | undefined | null
 
     constructor(id: string, name: string) {
       this.id = id
@@ -112,6 +141,11 @@ export function create_api(engine: MainModule) {
     get tilemap(): Tilemap | undefined {
       this.#tilemap ??= api.has_tilemap(this.id) ? new Tilemap(this.id) : null
       return this.#tilemap ?? undefined
+    }
+
+    get audio(): AudioSource | undefined {
+      this.#audio ??= api.has_audio_source(this.id) ? new AudioSource(this.id) : null
+      return this.#audio ?? undefined
     }
 
     set position([x, y]: Vec2) {

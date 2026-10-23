@@ -42,6 +42,17 @@ export const script_types = {
     clip: string
   }
 
+  export class AudioSource {
+    private readonly id: string
+    // True from play() until the sound ends or stop() is called, including while the sound is still loading.
+    readonly playing: boolean
+    // 1 plays the sound as recorded; negative values count as 0.
+    volume: number
+    // Starts the sound from the beginning, even if it is already playing.
+    play(): void
+    stop(): void
+  }
+
   export class Tilemap {
     private readonly id: string
     // Cell coordinates in, waypoints out, without the start cell; undefined when no path exists.
@@ -58,6 +69,7 @@ export const script_types = {
     #body: Body | undefined | null
     #animator: Animator | undefined | null
     #tilemap: Tilemap | undefined | null
+    #audio: AudioSource | undefined | null
     // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
     position: Vec2
     // Counter-clockwise, in radians.
@@ -66,6 +78,7 @@ export const script_types = {
     get body(): Body | undefined
     get animator(): Animator | undefined
     get tilemap(): Tilemap | undefined
+    get audio(): AudioSource | undefined
   }
 
   export abstract class Script {
