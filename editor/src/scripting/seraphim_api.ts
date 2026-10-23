@@ -25,9 +25,27 @@ export function create_api(engine: MainModule) {
     api.set_transform(id, x, y, rotation, scale_x, scale_y)
   }
 
+  class Body {
+    private readonly id: string
+
+    constructor(id: string) {
+      this.id = id
+    }
+
+    get velocity(): Vec2 {
+      const v = api.get_velocity(this.id)
+      return v ? [v.x, v.y] : [0, 0]
+    }
+
+    set velocity([x, y]: Vec2) {
+      api.set_velocity(this.id, x, y)
+    }
+  }
+
   class Entity {
     readonly id: string
     readonly name: string
+    #body: Body | undefined | null
 
     constructor(id: string, name: string) {
       this.id = id
@@ -37,6 +55,11 @@ export function create_api(engine: MainModule) {
     get position(): Vec2 {
       const { x, y } = read_transform(this.id)
       return [x, y]
+    }
+
+    get body(): Body | undefined {
+      this.#body ??= api.has_body(this.id) ? new Body(this.id) : null
+      return this.#body ?? undefined
     }
 
     set position([x, y]: Vec2) {

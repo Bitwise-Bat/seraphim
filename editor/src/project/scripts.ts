@@ -26,14 +26,22 @@ export const script_types = {
     .map((key) => `'${key}'`)
     .join(' | ')}
 
+  export class Body {
+    private readonly id: string
+    get velocity(): Vec2
+    set velocity([x, y]: Vec2)
+  }
+
   export class Entity {
     readonly id: string
     readonly name: string
+    #body: Body | undefined | null
     // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
     position: Vec2
     // Counter-clockwise, in radians.
     rotation: number
     scale: Vec2
+    get body(): Body | undefined
   }
 
   export abstract class Script {
