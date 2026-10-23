@@ -8,6 +8,7 @@
 #include "render/renderer.hpp"
 #include "scene/animation_system.hpp"
 #include "scene/components.hpp"
+#include "scene/navigator_grid.hpp"
 #include "scene/physics_system.hpp"
 #include "scene/picking.hpp"
 #include "scene/scene.hpp"
@@ -340,6 +341,101 @@ struct engine_api
         return g_app && g_app->scene.registry().all_of<seraphim::scene::animator>(g_app->scene.find(id));
     }
 
+    static bool has_tilemap(const std::string& id)
+    {
+        return g_app && g_app->scene.registry().all_of<seraphim::scene::tilemap>(g_app->scene.find(id));
+    }
+
+    static emscripten::val find_path(const std::string& tilemap_id, unsigned blocking_layer, unsigned start_x,
+                                     unsigned start_y, unsigned end_x, unsigned end_y)
+    {
+        const auto null = emscripten::val::null();
+
+        if (!g_app)
+            return null;
+
+        const auto* map = g_app->scene.registry().try_get<seraphim::scene::tilemap>(g_app->scene.find(tilemap_id));
+        if (!map)
+            return null;
+
+        const seraphim::scene::navigator_grid grid(*map, blocking_layer);
+        const auto waypoints = grid.find_path({start_x, start_y}, {end_x, end_y});
+        if (!waypoints)
+            return null;
+
+        auto result = emscripten::val::array();
+        for (const auto& cell : *waypoints)
+        {
+            auto point = emscripten::val::object();
+            point.set("x", cell.x);
+            point.set("y", cell.y);
+            result.call<void>("push", point);
+        }
+
+        return result;
+    }
+
+    static emscripten::val get_cell_at_coord(const std::string& tilemap_id, float world_x, float world_y)
+    {
+        const auto null = emscripten::val::null();
+
+        if (!g_app)
+            return null;
+
+        const entt::entity entity = g_app->scene.find(tilemap_id);
+        const auto* map = g_app->scene.registry().try_get<seraphim::scene::tilemap>(entity);
+        const auto* placement = g_app->scene.registry().try_get<seraphim::scene::transform>(entity);
+        if (!map || !placement)
+            return null;
+
+        const glm::vec2 cell = map->cell_size * placement->scale;
+        if (cell.x == 0.0F || cell.y == 0.0F)
+            return null;
+
+        // Same mapping as sprite_system::draw_tilemap: rows run downwards from the transform's position.
+        const float cosine = std::cos(placement->rotation);
+        const float sine = std::sin(placement->rotation);
+        const glm::vec2 offset = glm::vec2{world_x, world_y} - placement->position;
+        const glm::vec2 local{(offset.x * cosine) + (offset.y * sine), (offset.y * cosine) - (offset.x * sine)};
+        const glm::vec2 grid = glm::floor(glm::vec2{local.x / cell.x, -local.y / cell.y});
+        if (grid.x < 0.0F || grid.y < 0.0F || grid.x >= static_cast<float>(map->size.x) ||
+            grid.y >= static_cast<float>(map->size.y))
+            return null;
+
+        auto result = emscripten::val::object();
+        result.set("x", static_cast<unsigned>(grid.x));
+        result.set("y", static_cast<unsigned>(grid.y));
+        return result;
+    }
+
+    // The inverse of get_cell_at_coord: the world position of a cell's centre, so movers aim at the middle of a tile.
+    static emscripten::val get_cell_center(const std::string& tilemap_id, unsigned cell_x, unsigned cell_y)
+    {
+        const auto null = emscripten::val::null();
+
+        if (!g_app)
+            return null;
+
+        const entt::entity entity = g_app->scene.find(tilemap_id);
+        const auto* map = g_app->scene.registry().try_get<seraphim::scene::tilemap>(entity);
+        const auto* placement = g_app->scene.registry().try_get<seraphim::scene::transform>(entity);
+        if (!map || !placement || cell_x >= map->size.x || cell_y >= map->size.y)
+            return null;
+
+        const glm::vec2 cell = map->cell_size * placement->scale;
+        const float cosine = std::cos(placement->rotation);
+        const float sine = std::sin(placement->rotation);
+        const glm::vec2 local{(static_cast<float>(cell_x) + 0.5F) * cell.x,
+                              -(static_cast<float>(cell_y) + 0.5F) * cell.y};
+        const glm::vec2 world = placement->position +
+                                glm::vec2{(local.x * cosine) - (local.y * sine), (local.x * sine) + (local.y * cosine)};
+
+        auto result = emscripten::val::object();
+        result.set("x", world.x);
+        result.set("y", world.y);
+        return result;
+    }
+
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
     static bool is_mouse_button(int value) { return value >= SDL_BUTTON_LEFT && value <= SDL_BUTTON_X2; }
@@ -375,6 +471,10 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("set_clip", &engine_api::set_clip)
         .class_function("get_clip", &engine_api::get_clip)
         .class_function("has_animator", &engine_api::has_animator)
+        .class_function("find_path", &engine_api::find_path)
+        .class_function("has_tilemap", &engine_api::has_tilemap)
+        .class_function("get_cell_at_coord", &engine_api::get_cell_at_coord)
+        .class_function("get_cell_center", &engine_api::get_cell_center)
         .class_function("was_mouse_pressed", &engine_api::was_mouse_pressed)
         .class_function("was_mouse_released", &engine_api::was_mouse_released)
         .class_function("is_mouse_down", &engine_api::is_mouse_down)
