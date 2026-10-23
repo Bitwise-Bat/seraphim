@@ -350,6 +350,51 @@ struct engine_api
         return g_app && g_app->scene.registry().all_of<seraphim::scene::animator>(g_app->scene.find(id));
     }
 
+    static bool has_audio_source(const std::string& id)
+    {
+        return g_app && g_app->scene.registry().all_of<seraphim::scene::audio_source>(g_app->scene.find(id));
+    }
+
+    static void play_audio(const std::string& id)
+    {
+        if (!g_app || !g_app->assets)
+            return;
+        if (auto* source = g_app->scene.registry().try_get<seraphim::scene::audio_source>(g_app->scene.find(id)))
+            seraphim::scene::audio_system::play(*source, *g_app->assets);
+    }
+
+    static void stop_audio(const std::string& id)
+    {
+        if (!g_app)
+            return;
+        if (auto* source = g_app->scene.registry().try_get<seraphim::scene::audio_source>(g_app->scene.find(id)))
+            seraphim::scene::audio_system::stop(*source);
+    }
+
+    static bool is_audio_playing(const std::string& id)
+    {
+        if (!g_app)
+            return false;
+        const auto* source = g_app->scene.registry().try_get<seraphim::scene::audio_source>(g_app->scene.find(id));
+        return source && seraphim::scene::audio_system::is_playing(*source);
+    }
+
+    static float get_audio_volume(const std::string& id)
+    {
+        if (!g_app)
+            return 0.0F;
+        const auto* source = g_app->scene.registry().try_get<seraphim::scene::audio_source>(g_app->scene.find(id));
+        return source ? source->volume : 0.0F;
+    }
+
+    static void set_audio_volume(const std::string& id, float volume)
+    {
+        if (!g_app)
+            return;
+        if (auto* source = g_app->scene.registry().try_get<seraphim::scene::audio_source>(g_app->scene.find(id)))
+            seraphim::scene::audio_system::set_volume(*source, volume);
+    }
+
     static bool has_tilemap(const std::string& id)
     {
         return g_app && g_app->scene.registry().all_of<seraphim::scene::tilemap>(g_app->scene.find(id));
@@ -487,7 +532,13 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("was_mouse_pressed", &engine_api::was_mouse_pressed)
         .class_function("was_mouse_released", &engine_api::was_mouse_released)
         .class_function("is_mouse_down", &engine_api::is_mouse_down)
-        .class_function("get_mouse_position", &engine_api::get_mouse_position);
+        .class_function("get_mouse_position", &engine_api::get_mouse_position)
+        .class_function("has_audio_source", &engine_api::has_audio_source)
+        .class_function("play_audio", &engine_api::play_audio)
+        .class_function("stop_audio", &engine_api::stop_audio)
+        .class_function("is_audio_playing", &engine_api::is_audio_playing)
+        .class_function("get_audio_volume", &engine_api::get_audio_volume)
+        .class_function("set_audio_volume", &engine_api::set_audio_volume);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
