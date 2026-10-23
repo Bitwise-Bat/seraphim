@@ -6,6 +6,7 @@
 #include "platform/input.hpp"
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
+#include "scene/animation_system.hpp"
 #include "scene/components.hpp"
 #include "scene/physics_system.hpp"
 #include "scene/picking.hpp"
@@ -74,6 +75,8 @@ struct engine_api
         // The bodies belong to the old scene's entities.
         g_app->physics.reset();
         g_app->scene = std::move(*scene);
+        if (g_app->assets)
+            seraphim::scene::animation_system::resolve(g_app->scene.registry(), *g_app->assets);
         return {};
     }
 
@@ -339,6 +342,8 @@ SDL_AppResult SDL_AppIterate(void* appstate)
             if (!state.tick_handler.isUndefined() && !state.tick_handler.isNull())
                 state.tick_handler();
             state.physics->step(state.scene, tick_seconds);
+            if (state.assets)
+                seraphim::scene::animation_system::update(state.scene.registry(), *state.assets, tick_seconds);
         }
         // Edges belong to the first tick only, so a single press cannot fire twice when a slow frame runs several
         // ticks. With no tick this frame they are kept for the next one.
@@ -348,7 +353,11 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     state.renderer.poll();
     if (!state.assets && state.renderer.device())
+    {
         state.assets.emplace(state.renderer.device(), state.sources);
+        // A scene loaded before the GPU was ready has not been resolved yet.
+        seraphim::scene::animation_system::resolve(state.scene.registry(), *state.assets);
+    }
     if (!state.assets)
         return SDL_APP_CONTINUE;
 

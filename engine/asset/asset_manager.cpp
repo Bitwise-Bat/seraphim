@@ -47,6 +47,16 @@ const render::texture2d& asset_manager::texture(texture_handle handle) const
     return loaded ? *loaded : m_placeholder;
 }
 
+animation_set_handle asset_manager::find_animation_set(std::string_view uuid) const
+{
+    return m_animation_sets.find(uuid);
+}
+
+const animation_set* asset_manager::get_animation_set(animation_set_handle handle) const
+{
+    return m_animation_sets.get(handle);
+}
+
 void asset_manager::update()
 {
     for (const std::string& id : m_sources.take_changed())

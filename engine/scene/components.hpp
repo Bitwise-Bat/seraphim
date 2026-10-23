@@ -1,7 +1,9 @@
 #pragma once
 
+#include "asset/animation_set.hpp"
 #include "asset/texture_handle.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
@@ -76,6 +78,19 @@ struct collider
     float restitution = 0.0F;
     // Detects overlaps without colliding.
     bool sensor = false;
+};
+
+// Plays a clip of an animation set by rewriting the sprite's texture region.
+struct animator
+{
+    // Asset id of the animation set.
+    std::string animation_set;
+    // Resolved from the asset id when the scene loads.
+    asset::animation_set_handle handle;
+    std::string clip;
+    std::size_t frame = 0;
+    // Seconds spent on the current frame.
+    float elapsed = 0.0F;
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.

@@ -191,6 +191,15 @@ std::optional<collider> read_collider(const json& value)
     return out;
 }
 
+std::optional<animator> read_animator(const json& value)
+{
+    animator out;
+    if (!value.is_object() || !read_field(value, "animation_set", out.animation_set) ||
+        !read_field(value, "clip", out.clip))
+        return std::nullopt;
+    return out;
+}
+
 std::optional<scripts> read_scripts(const json& value)
 {
     scripts out;
@@ -249,6 +258,13 @@ std::expected<void, std::string> read_entity(scene& scene, const json& value)
             if (!parsed)
                 return std::unexpected(std::format("Entity '{}' has an invalid collider", id));
             registry.emplace<collider>(entity, *parsed);
+        }
+        else if (key == "animator")
+        {
+            auto parsed = read_animator(component);
+            if (!parsed)
+                return std::unexpected(std::format("Entity '{}' has an invalid animator", id));
+            registry.emplace<animator>(entity, std::move(*parsed));
         }
         else if (key == "scripts")
         {
@@ -333,6 +349,8 @@ std::string serialize_scene(const scene& scene)
                 {"restitution", shape->restitution},
                 {"sensor", shape->sensor},
             };
+        if (const auto* player = registry.try_get<animator>(entity))
+            components["animator"] = {{"animation_set", player->animation_set}, {"clip", player->clip}};
         if (const auto* list = registry.try_get<scripts>(entity))
             components["scripts"] = {{"assets", list->assets}};
 
