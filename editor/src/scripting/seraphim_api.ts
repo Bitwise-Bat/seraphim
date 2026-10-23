@@ -58,11 +58,36 @@ export function create_api(engine: MainModule) {
     }
   }
 
+  class Tilemap {
+    private readonly id: string
+
+    constructor(id: string) {
+      this.id = id
+    }
+
+    find_path([sx, sy]: Vec2, [ex, ey]: Vec2, blocking_layer: number): Vec2[] | undefined {
+      const path = api.find_path(this.id, blocking_layer, sx, sy, ex, ey) as { x: number; y: number }[] | null
+      return path?.map(({ x, y }): Vec2 => [x, y])
+    }
+
+    // The engine answers with an { x, y } object, but scripts pass cells straight back into find_path as Vec2.
+    get_cell_at_coord(x: number, y: number): Vec2 | undefined {
+      const cell = api.get_cell_at_coord(this.id, x, y) as { x: number; y: number } | null
+      return cell ? [cell.x, cell.y] : undefined
+    }
+
+    get_cell_center([x, y]: Vec2): Vec2 | undefined {
+      const center = api.get_cell_center(this.id, x, y) as { x: number; y: number } | null
+      return center ? [center.x, center.y] : undefined
+    }
+  }
+
   class Entity {
     readonly id: string
     readonly name: string
     #body: Body | undefined | null
     #animator: Animator | undefined | null
+    #tilemap: Tilemap | undefined | null
 
     constructor(id: string, name: string) {
       this.id = id
@@ -82,6 +107,11 @@ export function create_api(engine: MainModule) {
     get animator(): Animator | undefined {
       this.#animator ??= api.has_animator(this.id) ? new Animator(this.id) : null
       return this.#animator ?? undefined
+    }
+
+    get tilemap(): Tilemap | undefined {
+      this.#tilemap ??= api.has_tilemap(this.id) ? new Tilemap(this.id) : null
+      return this.#tilemap ?? undefined
     }
 
     set position([x, y]: Vec2) {

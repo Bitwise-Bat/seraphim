@@ -42,11 +42,22 @@ export const script_types = {
     clip: string
   }
 
+  export class Tilemap {
+    private readonly id: string
+    // Cell coordinates in, waypoints out, without the start cell; undefined when no path exists.
+    find_path(start: Vec2, end: Vec2, blocking_layer: number): Vec2[] | undefined
+    // The cell under a world position; undefined outside the map.
+    get_cell_at_coord(x: number, y: number): Vec2 | undefined
+    // World position of the centre of a cell; undefined outside the map.
+    get_cell_center(cell: Vec2): Vec2 | undefined
+  }
+
   export class Entity {
     readonly id: string
     readonly name: string
     #body: Body | undefined | null
     #animator: Animator | undefined | null
+    #tilemap: Tilemap | undefined | null
     // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
     position: Vec2
     // Counter-clockwise, in radians.
@@ -54,6 +65,7 @@ export const script_types = {
     scale: Vec2
     get body(): Body | undefined
     get animator(): Animator | undefined
+    get tilemap(): Tilemap | undefined
   }
 
   export abstract class Script {
