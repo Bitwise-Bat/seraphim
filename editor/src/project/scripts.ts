@@ -1,4 +1,4 @@
-import { key_codes } from '../scripting/keys'
+import { key_codes, mouse_codes } from '../scripting/keys'
 
 // What "New script" writes: the smallest script the engine will run, with the hooks a script usually fills in first.
 export const script_template = {
@@ -24,6 +24,10 @@ export const script_types = {
 
   export type Key = ${Object.keys(key_codes)
     .map((key) => `'${key}'`)
+    .join(' | ')}
+
+  export type MouseButton = ${Object.keys(mouse_codes)
+    .map((button) => `'${button}'`)
     .join(' | ')}
 
   export class Body {
@@ -71,6 +75,11 @@ export const script_types = {
     is_down(key: Key): boolean
     was_pressed(key: Key): boolean
     was_released(key: Key): boolean
+    is_mouse_down(button: MouseButton): boolean
+    was_mouse_pressed(button: MouseButton): boolean
+    was_mouse_released(button: MouseButton): boolean
+    // The point under the cursor in world coordinates, so it can be compared with entity positions directly.
+    readonly mouse_position: Vec2
   }
 
   // Only works in the browser; on the game server there is no camera.

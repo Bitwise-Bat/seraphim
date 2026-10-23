@@ -1,5 +1,5 @@
 import type { MainModule } from 'seraphim/seraphim.js'
-import { key_codes, type KeyName } from './keys'
+import { key_codes, type KeyName, mouse_codes, type MouseName } from './keys'
 
 // Everything exported from the module that scripts import as 'seraphim'. Scripts reach the engine only through this, so
 // adding a capability means adding it here and declaring it in script_types (project/scripts.ts).
@@ -139,6 +139,13 @@ export function create_api(engine: MainModule) {
     is_down: (key: KeyName): boolean => api.is_key_down(key_codes[key]),
     was_pressed: (key: KeyName): boolean => api.was_key_pressed(key_codes[key]),
     was_released: (key: KeyName): boolean => api.was_key_released(key_codes[key]),
+    is_mouse_down: (button: MouseName): boolean => api.is_mouse_down(mouse_codes[button]),
+    was_mouse_pressed: (button: MouseName): boolean => api.was_mouse_pressed(mouse_codes[button]),
+    was_mouse_released: (button: MouseName): boolean => api.was_mouse_released(mouse_codes[button]),
+    get mouse_position(): Vec2 {
+      const position = api.get_mouse_position() as { x: number; y: number } | null
+      return position ? [position.x, position.y] : [0, 0]
+    },
   }
 
   function find_entity(name: string): Entity | undefined {

@@ -66,4 +66,8 @@ export const key_codes = {
   right_alt: 230,
 } as const
 
+// SDL button numbers, which start at 1.
+export const mouse_codes = { left: 1, middle: 2, right: 3, back: 4, forward: 5 } as const
+
+export type MouseName = keyof typeof mouse_codes
 export type KeyName = keyof typeof key_codes
