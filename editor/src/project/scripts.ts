@@ -31,11 +31,17 @@ export const script_types = {
     get velocity(): Vec2
     set velocity([x, y]: Vec2)
   }
+  
+  export class Animator {
+     get current(): string
+     set_anim(anim: string): void
+  }
 
   export class Entity {
     readonly id: string
     readonly name: string
     #body: Body | undefined | null
+    #animator: Animator | undefined | null
     // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
     position: Vec2
     // Counter-clockwise, in radians.
