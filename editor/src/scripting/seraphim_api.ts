@@ -163,6 +163,9 @@ export function create_api(engine: MainModule) {
       // A view height of -1 keeps the current zoom.
       api.set_camera(x, y, -1)
     },
+    screen_to_world(x: number, y: number): { x: number; y: number } {
+      return api.screen_to_world(x, y)
+    },
   }
 
   const input = {
