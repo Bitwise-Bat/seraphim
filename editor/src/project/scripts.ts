@@ -25,20 +25,17 @@ export const script_types = {
   export type Key = ${Object.keys(key_codes)
     .map((key) => `'${key}'`)
     .join(' | ')}
-    
-  export class Engine {
-    static 
-  }
 
   export class Body {
     private readonly id: string
     get velocity(): Vec2
     set velocity([x, y]: Vec2)
   }
-  
+
   export class Animator {
-     get clip(): string
-     set clip(anim: string): void
+    private readonly id: string
+    // Name of the playing clip. Assigning another one starts it from its first frame.
+    clip: string
   }
 
   export class Entity {
@@ -52,7 +49,7 @@ export const script_types = {
     rotation: number
     scale: Vec2
     get body(): Body | undefined
-    get animator() : Animator | undefined
+    get animator(): Animator | undefined
   }
 
   export abstract class Script {
@@ -74,6 +71,12 @@ export const script_types = {
     is_down(key: Key): boolean
     was_pressed(key: Key): boolean
     was_released(key: Key): boolean
+  }
+
+  // Only works in the browser; on the game server there is no camera.
+  export const camera: {
+    // Each read returns a copy, so assign a whole new value to move it: camera.position = [x, y].
+    position: Vec2
   }
 
   export const time: {

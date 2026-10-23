@@ -24,20 +24,20 @@ export function create_api(engine: MainModule) {
   function write_transform(id: string, { x, y, rotation, scale_x, scale_y }: EngineTransform): void {
     api.set_transform(id, x, y, rotation, scale_x, scale_y)
   }
-  
+
   class Animator {
-    private readonly entity : string;
-    
-    constructor(entity: string) {
-      this.entity = entity;
+    private readonly id: string
+
+    constructor(id: string) {
+      this.id = id
     }
-    
-    get clip() : string | undefined {
-      return api.get_clip(this.entity);
+
+    get clip(): string {
+      return api.get_clip(this.id) ?? ''
     }
-    
-    set clip(clip: string){
-      api.set_clip(this.entity, clip);
+
+    set clip(clip: string) {
+      api.set_clip(this.id, clip)
     }
   }
 
@@ -80,8 +80,8 @@ export function create_api(engine: MainModule) {
     }
     
     get animator(): Animator | undefined {
-      this.#animator ??= api.has_animator(this.id) ? new Animator(this.id) : null;
-      return this.#animator ?? undefined;
+      this.#animator ??= api.has_animator(this.id) ? new Animator(this.id) : null
+      return this.#animator ?? undefined
     }
 
     set position([x, y]: Vec2) {
@@ -123,6 +123,18 @@ export function create_api(engine: MainModule) {
     tick: 0,
   }
 
+  // Only exists where the game is shown, unlike the entity API, which server scripts use as well.
+  const camera = {
+    get position(): Vec2 {
+      const { x, y } = api.get_camera() as { x: number; y: number }
+      return [x, y]
+    },
+    set position([x, y]: Vec2) {
+      // A view height of -1 keeps the current zoom.
+      api.set_camera(x, y, -1)
+    },
+  }
+
   const input = {
     is_down: (key: KeyName): boolean => api.is_key_down(key_codes[key]),
     was_pressed: (key: KeyName): boolean => api.was_key_pressed(key_codes[key]),
@@ -134,7 +146,7 @@ export function create_api(engine: MainModule) {
     return id ? new Entity(id, name) : undefined
   }
 
-  return { Entity, Script, log, input, time, find_entity }
+  return { Entity, Script, log, input, time, camera, find_entity }
 }
 
 export type ScriptApi = ReturnType<typeof create_api>
