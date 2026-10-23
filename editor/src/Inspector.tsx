@@ -2,10 +2,12 @@ import { useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { useAssetFileDrop } from './asset_drag'
 import { find_file_by_id } from './project/assets'
+import { is_sound_name } from './project/audio'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import {
   component_defaults,
   type Animator,
+  type AudioSource,
   type BodyType,
   type Collider,
   type ColliderShape,
@@ -469,12 +471,42 @@ function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value:
   )
 }
 
+function AudioSourceFields({ value, on_change }: { value: AudioSource; on_change: (value: AudioSource) => void }) {
+  return (
+    <>
+      <Row label="Sound">
+        <AssetField
+          store={useAssetStore}
+          asset={value.sound}
+          placeholder="Drop a sound here"
+          accepts={is_sound_name}
+          on_change={(sound) => on_change({ ...value, sound })}
+        />
+      </Row>
+      <Row label="Volume">
+        <NumberField label="×" value={value.volume} on_change={(volume) => on_change({ ...value, volume })} />
+      </Row>
+      <Row label="Loop">
+        <CheckboxField label="Loop" value={value.loop} on_change={(loop) => on_change({ ...value, loop })} />
+      </Row>
+      <Row label="Play on start">
+        <CheckboxField
+          label="Play on start"
+          value={value.play_on_start}
+          on_change={(play_on_start) => on_change({ ...value, play_on_start })}
+        />
+      </Row>
+    </>
+  )
+}
+
 const component_titles: Record<ComponentName, string> = {
   transform: 'Transform',
   sprite: 'Sprite',
   rigidbody: 'Rigidbody',
   collider: 'Collider',
   animator: 'Animator',
+  audio_source: 'Audio source',
   tilemap: 'Tilemap',
   scripts: 'Scripts',
 }
@@ -501,7 +533,7 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite, rigidbody, collider, animator, tilemap, scripts } = entity.components
+  const { transform, sprite, rigidbody, collider, animator, audio_source, tilemap, scripts } = entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -547,6 +579,11 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
       {animator && (
         <ComponentSection name="animator" on_remove={() => set_component('animator', undefined)}>
           <AnimatorFields value={animator} on_change={(value) => set_component('animator', value)} />
+        </ComponentSection>
+      )}
+      {audio_source && (
+        <ComponentSection name="audio_source" on_remove={() => set_component('audio_source', undefined)}>
+          <AudioSourceFields value={audio_source} on_change={(value) => set_component('audio_source', value)} />
         </ComponentSection>
       )}
       {tilemap && (

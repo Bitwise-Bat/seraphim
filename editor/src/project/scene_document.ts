@@ -50,6 +50,16 @@ export type Collider = {
   sensor: boolean
 }
 
+// Plays a sound while the scene is simulated.
+export type AudioSource = {
+  // Asset id of the sound, or empty for none.
+  sound: string
+  // 1 plays the sound as recorded.
+  volume: number
+  loop: boolean
+  play_on_start: boolean
+}
+
 export type TilemapLayer = {
   // One string per row from the top, holding the row's tile numbers separated by spaces; 0 is an empty cell.
   rows: string[]
@@ -79,6 +89,7 @@ export type Components = {
   rigidbody?: Rigidbody
   collider?: Collider
   animator?: Animator
+  audio_source?: AudioSource
   tilemap?: Tilemap
   scripts?: Scripts
 }
@@ -113,6 +124,7 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     sensor: false,
   }),
   animator: () => ({ animation_set: '', clip: '' }),
+  audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false }),
   tilemap: () => ({ tileset: '', cell_size: [1, 1], size: [16, 16], layers: [empty_layer([16, 16])], order: 0 }),
   scripts: () => ({ assets: [] }),
 }
