@@ -219,14 +219,52 @@ struct engine_api
         if (view_height > 0)
             camera.view_height = view_height;
     }
-    
-    static void get_velocity(std::string entity_id)
+
+    static emscripten::val get_velocity(const std::string& entity_id)
     {
-        if (!g_app)
-            return;
+        const auto null = emscripten::val::null();
+
+        if (!g_app || !g_app->physics)
+            return null;
+
+        const entt::entity entity = g_app->scene.find(entity_id);
+        if (entity == entt::null)
+            return null;
+
+        auto velocity = g_app->physics->get_velocity(entity);
+        if (!velocity)
+            return null;
+
+        auto result = emscripten::val::object();
+        result.set("x", velocity->x);
+        result.set("y", velocity->y);
+
+        return result;
     }
-    
-    static void set_velocity();
+
+    static void set_velocity(const std::string& entity_id, float velocity_x, float velocity_y)
+    {
+        if (!g_app || !g_app->physics)
+            return;
+
+        const entt::entity entity = g_app->scene.find(entity_id);
+        if (entity == entt::null)
+            return;
+
+        g_app->physics->set_velocity(entity, {velocity_x, velocity_y});
+    }
+
+    static bool has_body(const std::string& id)
+    {
+        if (!g_app || !g_app->physics)
+            return false;
+
+        const entt::entity entity = g_app->scene.find(id);
+        if (entity == entt::null)
+            return false;
+
+        return g_app->physics->has_body(entity);
+    }
 
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
@@ -253,7 +291,10 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("screen_to_world", &engine_api::screen_to_world)
         .class_function("pick_entity", &engine_api::pick_entity)
         .class_function("get_camera", &engine_api::get_camera)
-        .class_function("set_camera", &engine_api::set_camera);
+        .class_function("set_camera", &engine_api::set_camera)
+        .class_function("get_velocity", &engine_api::get_velocity)
+        .class_function("set_velocity", &engine_api::set_velocity)
+        .class_function("has_body", &engine_api::has_body);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
