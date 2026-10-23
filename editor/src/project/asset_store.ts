@@ -32,7 +32,8 @@ export type AssetStore = {
   move: (source_path: string, entry: AssetEntry, target_path: string) => Promise<void>
   remove: (entry: AssetEntry) => Promise<void>
   navigate: (path: string) => void
-  find_id: (entry :AssetEntry, path: string) => Promise<string> | null
+  // Resolves to null when the entry has no asset id.
+  find_id: (entry: AssetEntry, path: string) => Promise<string | null>
 }
 
 function error_message(error: unknown): string {
