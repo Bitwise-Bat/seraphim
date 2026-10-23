@@ -25,6 +25,10 @@ export const script_types = {
   export type Key = ${Object.keys(key_codes)
     .map((key) => `'${key}'`)
     .join(' | ')}
+    
+  export class Engine {
+    static 
+  }
 
   export class Body {
     private readonly id: string
@@ -33,8 +37,8 @@ export const script_types = {
   }
   
   export class Animator {
-     get current(): string
-     set_anim(anim: string): void
+     get clip(): string
+     set clip(anim: string): void
   }
 
   export class Entity {
@@ -48,6 +52,7 @@ export const script_types = {
     rotation: number
     scale: Vec2
     get body(): Body | undefined
+    get animator() : Animator | undefined
   }
 
   export abstract class Script {

@@ -24,6 +24,22 @@ export function create_api(engine: MainModule) {
   function write_transform(id: string, { x, y, rotation, scale_x, scale_y }: EngineTransform): void {
     api.set_transform(id, x, y, rotation, scale_x, scale_y)
   }
+  
+  class Animator {
+    private readonly entity : string;
+    
+    constructor(entity: string) {
+      this.entity = entity;
+    }
+    
+    get clip() : string | undefined {
+      return api.get_clip(this.entity);
+    }
+    
+    set clip(clip: string){
+      api.set_clip(this.entity, clip);
+    }
+  }
 
   class Body {
     private readonly id: string
@@ -46,6 +62,7 @@ export function create_api(engine: MainModule) {
     readonly id: string
     readonly name: string
     #body: Body | undefined | null
+    #animator: Animator | undefined | null
 
     constructor(id: string, name: string) {
       this.id = id
@@ -60,6 +77,11 @@ export function create_api(engine: MainModule) {
     get body(): Body | undefined {
       this.#body ??= api.has_body(this.id) ? new Body(this.id) : null
       return this.#body ?? undefined
+    }
+    
+    get animator(): Animator | undefined {
+      this.#animator ??= api.has_animator(this.id) ? new Animator(this.id) : null;
+      return this.#animator ?? undefined;
     }
 
     set position([x, y]: Vec2) {
