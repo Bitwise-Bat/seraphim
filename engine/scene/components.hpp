@@ -2,6 +2,7 @@
 
 #include "asset/animation_set.hpp"
 #include "asset/texture_handle.hpp"
+#include "asset/tileset.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -91,6 +92,23 @@ struct animator
     std::size_t frame = 0;
     // Seconds spent on the current frame.
     float elapsed = 0.0F;
+};
+
+// A grid of cells filled from one tileset. The transform's position is the top-left corner of the map, and rows run
+// downwards from there, so the scene file reads like the map looks.
+struct tilemap
+{
+    // Asset id of the tileset.
+    std::string tileset;
+    // Resolved from the asset id when the scene loads.
+    asset::tileset_handle handle;
+    // In world units, before the transform's scale.
+    glm::vec2 cell_size{1.0F};
+    // In cells.
+    glm::uvec2 size{0};
+    // Each layer holds size.x * size.y tile numbers row by row, where 0 is an empty cell. Later layers are drawn on
+    // top.
+    std::vector<std::vector<std::uint16_t>> layers;
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.

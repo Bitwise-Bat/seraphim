@@ -4,14 +4,17 @@
 #include "scene/components.hpp"
 
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <format>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <limits>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -54,6 +57,14 @@ bool read(const json& value, std::int32_t& out)
     return true;
 }
 
+bool read(const json& value, std::uint32_t& out)
+{
+    if (!value.is_number_unsigned() || value.get<std::uint64_t>() > std::numeric_limits<std::uint32_t>::max())
+        return false;
+    out = value.get<std::uint32_t>();
+    return true;
+}
+
 bool read(const json& value, std::string& out)
 {
     if (!value.is_string())
@@ -73,8 +84,8 @@ bool read(const json& value, std::vector<std::string>& out)
     return true;
 }
 
-template <glm::length_t Length>
-bool read(const json& value, glm::vec<Length, float>& out)
+template <glm::length_t Length, typename T>
+bool read(const json& value, glm::vec<Length, T>& out)
 {
     if (!value.is_array() || value.size() != Length)
         return false;
@@ -142,8 +153,8 @@ bool read_field(const json& object, const char* key, T& out)
     return field == object.end() || read(*field, out);
 }
 
-template <glm::length_t Length>
-json write(const glm::vec<Length, float>& value)
+template <glm::length_t Length, typename T>
+json write(const glm::vec<Length, T>& value)
 {
     json array = json::array();
     for (glm::length_t i = 0; i < Length; ++i)
@@ -198,6 +209,81 @@ std::optional<animator> read_animator(const json& value)
         !read_field(value, "clip", out.clip))
         return std::nullopt;
     return out;
+}
+
+// A row is the tile numbers of one line of the map, separated by spaces.
+bool read_row(std::string_view text, std::uint32_t width, std::vector<std::uint16_t>& out)
+{
+    const char* it = text.data();
+    const char* const end = it + text.size();
+    const auto skip_spaces = [&]
+    {
+        while (it != end && *it == ' ')
+            ++it;
+    };
+
+    for (std::uint32_t x = 0; x < width; ++x)
+    {
+        skip_spaces();
+        std::uint16_t tile = 0;
+        const auto [next, error] = std::from_chars(it, end, tile);
+        if (error != std::errc{})
+            return false;
+        out.push_back(tile);
+        it = next;
+    }
+    skip_spaces();
+    return it == end;
+}
+
+bool read_layer(const json& value, glm::uvec2 size, std::vector<std::uint16_t>& out)
+{
+    if (!value.is_object())
+        return false;
+    const auto rows = value.find("rows");
+    if (rows == value.end() || !rows->is_array() || rows->size() != size.y)
+        return false;
+
+    out.reserve(static_cast<std::size_t>(size.x) * size.y);
+    for (const json& row : *rows)
+        if (!row.is_string() || !read_row(row.get_ref<const std::string&>(), size.x, out))
+            return false;
+    return true;
+}
+
+std::optional<tilemap> read_tilemap(const json& value)
+{
+    tilemap out;
+    if (!value.is_object() || !read_field(value, "tileset", out.tileset) ||
+        !read_field(value, "cell_size", out.cell_size) || !read_field(value, "size", out.size))
+        return std::nullopt;
+
+    const auto layers = value.find("layers");
+    if (layers == value.end())
+        return out;
+    if (!layers->is_array())
+        return std::nullopt;
+    for (const json& layer : *layers)
+        if (!read_layer(layer, out.size, out.layers.emplace_back()))
+            return std::nullopt;
+    return out;
+}
+
+json write_layer(const std::vector<std::uint16_t>& tiles, glm::uvec2 size)
+{
+    json rows = json::array();
+    for (std::uint32_t y = 0; y < size.y; ++y)
+    {
+        std::string row;
+        for (std::uint32_t x = 0; x < size.x; ++x)
+        {
+            if (x > 0)
+                row += ' ';
+            row += std::to_string(tiles[(static_cast<std::size_t>(y) * size.x) + x]);
+        }
+        rows.push_back(std::move(row));
+    }
+    return {{"rows", std::move(rows)}};
 }
 
 std::optional<scripts> read_scripts(const json& value)
@@ -265,6 +351,13 @@ std::expected<void, std::string> read_entity(scene& scene, const json& value)
             if (!parsed)
                 return std::unexpected(std::format("Entity '{}' has an invalid animator", id));
             registry.emplace<animator>(entity, std::move(*parsed));
+        }
+        else if (key == "tilemap")
+        {
+            auto parsed = read_tilemap(component);
+            if (!parsed)
+                return std::unexpected(std::format("Entity '{}' has an invalid tilemap", id));
+            registry.emplace<tilemap>(entity, std::move(*parsed));
         }
         else if (key == "scripts")
         {
@@ -351,6 +444,18 @@ std::string serialize_scene(const scene& scene)
             };
         if (const auto* player = registry.try_get<animator>(entity))
             components["animator"] = {{"animation_set", player->animation_set}, {"clip", player->clip}};
+        if (const auto* map = registry.try_get<tilemap>(entity))
+        {
+            json layers = json::array();
+            for (const auto& tiles : map->layers)
+                layers.push_back(write_layer(tiles, map->size));
+            components["tilemap"] = {
+                {"tileset", map->tileset},
+                {"cell_size", write(map->cell_size)},
+                {"size", write(map->size)},
+                {"layers", std::move(layers)},
+            };
+        }
         if (const auto* list = registry.try_get<scripts>(entity))
             components["scripts"] = {{"assets", list->assets}};
 
