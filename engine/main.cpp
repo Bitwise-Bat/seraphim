@@ -269,6 +269,56 @@ struct engine_api
         return g_app->physics->has_body(entity);
     }
 
+    static std::optional<std::string> get_clip(const std::string& entity_id)
+    {
+        if (!g_app)
+            return std::nullopt;
+
+        const entt::entity entity = g_app->scene.find(entity_id);
+        if (entity == entt::null)
+            return std::nullopt;
+
+        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
+        {
+            return animator.clip;
+        }
+
+        return std::nullopt;
+    }
+
+    static void set_clip(const std::string& entity_id, const std::string& clip)
+    {
+        if (!g_app)
+            return;
+
+        const entt::entity entity = g_app->scene.find(entity_id);
+        if (entity == entt::null)
+            return;
+
+        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
+        {
+            animator.clip = clip;
+            break;
+        }
+    }
+
+    static bool has_animator(const std::string& entity_id)
+    {
+        if (!g_app)
+            return false;
+
+        const entt::entity entity = g_app->scene.find(entity_id);
+        if (entity == entt::null)
+            return false;
+
+        for (const auto [entity, animator] : g_app->scene.registry().view<seraphim::scene::animator>().each())
+        {
+            return true;
+        }
+
+        return false;
+    };
+
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
 };
@@ -277,6 +327,8 @@ struct engine_api
 
 EMSCRIPTEN_BINDINGS(seraphim)
 {
+    emscripten::register_optional<std::string>();
+
     emscripten::class_<engine_api>("Engine")
         .class_function("register_asset", &engine_api::register_asset)
         .class_function("load_scene", &engine_api::load_scene)
@@ -297,7 +349,10 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("set_camera", &engine_api::set_camera)
         .class_function("get_velocity", &engine_api::get_velocity)
         .class_function("set_velocity", &engine_api::set_velocity)
-        .class_function("has_body", &engine_api::has_body);
+        .class_function("has_body", &engine_api::has_body)
+        .class_function("set_clip", &engine_api::set_clip)
+        .class_function("get_clip", &engine_api::get_clip)
+        .class_function("has_animator", &engine_api::has_animator);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
