@@ -169,6 +169,48 @@ struct engine_api
                g_app->input.was_released(static_cast<seraphim::platform::key>(scancode));
     }
 
+    static bool is_mouse_down(int button)
+    {
+        return g_app && is_mouse_button(button) &&
+               g_app->input.is_down(static_cast<seraphim::platform::mouse_button>(button));
+    }
+
+    static bool was_mouse_pressed(int button)
+    {
+        return g_app && is_mouse_button(button) &&
+               g_app->input.was_pressed(static_cast<seraphim::platform::mouse_button>(button));
+    }
+
+    static bool was_mouse_released(int button)
+    {
+        return g_app && is_mouse_button(button) &&
+               g_app->input.was_released(static_cast<seraphim::platform::mouse_button>(button));
+    }
+
+    // SDL reports the cursor in window coordinates, while the camera maps canvas pixels, which differ on high-DPI
+    // screens.
+    static emscripten::val get_mouse_position()
+    {
+        const auto null = emscripten::val::null();
+
+        if (!g_app)
+            return null;
+
+        int width = 0;
+        int height = 0;
+        if (!SDL_GetWindowSize(g_app->window.get(), &width, &height) || width == 0 || height == 0)
+            return null;
+
+        const glm::vec2 viewport = g_app->renderer.viewport_size();
+        const glm::vec2 cursor{g_app->input.mouse_x(), g_app->input.mouse_y()};
+        const glm::vec2 world = g_app->camera.screen_to_world(cursor * viewport / glm::vec2{width, height}, viewport);
+
+        auto result = emscripten::val::object();
+        result.set("x", world.x);
+        result.set("y", world.y);
+        return result;
+    }
+
     static std::string save_scene()
     {
         if (!g_app)
@@ -300,6 +342,7 @@ struct engine_api
 
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
+    static bool is_mouse_button(int value) { return value >= SDL_BUTTON_LEFT && value <= SDL_BUTTON_X2; }
 };
 
 } // namespace
@@ -331,7 +374,11 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("has_body", &engine_api::has_body)
         .class_function("set_clip", &engine_api::set_clip)
         .class_function("get_clip", &engine_api::get_clip)
-        .class_function("has_animator", &engine_api::has_animator);
+        .class_function("has_animator", &engine_api::has_animator)
+        .class_function("was_mouse_pressed", &engine_api::was_mouse_pressed)
+        .class_function("was_mouse_released", &engine_api::was_mouse_released)
+        .class_function("is_mouse_down", &engine_api::is_mouse_down)
+        .class_function("get_mouse_position", &engine_api::get_mouse_position);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])
