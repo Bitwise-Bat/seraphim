@@ -36,11 +36,33 @@ function Outline({ entity }: { entity: SceneEntity }) {
   )
 }
 
-// Draws every collider over the canvas. Hidden while playing, since the document keeps the pre-play positions.
+// Marks the map's area, so an empty tilemap can be found and painted.
+function TilemapBounds({ entity }: { entity: SceneEntity }) {
+  const { tilemap, transform } = entity.components
+  if (!tilemap || !transform) {
+    return null
+  }
+  return (
+    <g
+      className="tilemap-bounds"
+      transform={`translate(${transform.position[0]} ${transform.position[1]}) rotate(${transform.rotation * degrees_per_radian}) scale(${transform.scale[0]} ${transform.scale[1]})`}
+    >
+      <rect
+        x={0}
+        y={-tilemap.size[1] * tilemap.cell_size[1]}
+        width={tilemap.size[0] * tilemap.cell_size[0]}
+        height={tilemap.size[1] * tilemap.cell_size[1]}
+      />
+    </g>
+  )
+}
+
+// Draws every collider and the selected tilemap's bounds over the canvas. Hidden while playing, since the document keeps the pre-play positions.
 export function ColliderOutlines({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement | null> }) {
   const position = useCameraStore((store) => store.position)
   const view_height = useCameraStore((store) => store.view_height)
   const entities = useSceneStore((store) => store.document?.entities)
+  const selected_id = useSceneStore((store) => store.selected)
   const [size, set_size] = useState<{ width: number; height: number }>()
 
   useEffect(() => {
@@ -59,6 +81,7 @@ export function ColliderOutlines({ canvas_ref }: { canvas_ref: RefObject<HTMLCan
   if (!size || !entities) {
     return null
   }
+  const selected = entities.find((entity) => entity.id === selected_id)
   const pixels_per_unit = size.height / view_height
 
   // The group maps world units to pixels with y flipped, so outlines are written in world coordinates.
@@ -70,6 +93,7 @@ export function ColliderOutlines({ canvas_ref }: { canvas_ref: RefObject<HTMLCan
         {entities.map((entity) => (
           <Outline key={entity.id} entity={entity} />
         ))}
+        {selected && <TilemapBounds entity={selected} />}
       </g>
     </svg>
   )

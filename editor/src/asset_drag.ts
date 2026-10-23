@@ -22,8 +22,12 @@ export function start_asset_drag(event: DragEvent, folder: string, asset: Dragge
 }
 
 // Drop handlers for fields that reference a file from one project folder, such as a sprite's texture. Folders are not
-// accepted.
-export function useAssetFileDrop(store: AssetStoreHook, on_drop: (id: string) => void) {
+// accepted, and neither are files that accepts turns away; the name is only known on drop, not during dragover.
+export function useAssetFileDrop(
+  store: AssetStoreHook,
+  on_drop: (id: string) => void,
+  accepts: (name: string) => boolean = () => true,
+) {
   const root = useStore(store, (state) => state.root)
   const folder = useStore(store, (state) => state.folder)
   const [active, set_active] = useState(false)
@@ -54,7 +58,7 @@ export function useAssetFileDrop(store: AssetStoreHook, on_drop: (id: string) =>
           entry.kind === 'file' && root
             ? find_folder(root, source_path)?.files.find((candidate) => candidate.name === entry.name)
             : undefined
-        if (file) {
+        if (file && accepts(file.name)) {
           on_drop(file.id)
         }
       },

@@ -7,6 +7,7 @@ import { PlayControls } from './PlayControls'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
 import { useSceneStore } from './project/scene_store'
+import { useTilemapPainting } from './tilemap_painting'
 import { useCamera } from './viewport_camera'
 import { useViewportDrag } from './viewport_drag'
 import { ViewportOverlay } from './ViewportOverlay'
@@ -40,6 +41,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
 
   useViewportDrag(canvas, engine)
   useCamera(canvas, engine)
+  useTilemapPainting(canvas, engine)
 
   useEffect(() => {
     if (!canvas.current) {

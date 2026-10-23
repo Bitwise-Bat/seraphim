@@ -505,6 +505,39 @@ button:focus-visible,
   stroke-dasharray: 4 3;
 }
 
+.tilemap-bounds rect {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.toolbar-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tile-palette {
+  position: relative;
+  margin-top: 0.5rem;
+  line-height: 0;
+}
+
+.tile-palette img {
+  width: 100%;
+  cursor: crosshair;
+  /* Tiles are usually pixel art, which smoothing would blur at palette size. */
+  image-rendering: pixelated;
+}
+
+.tile-palette-selection {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+
 .gizmo-handle {
   color: var(--text);
   cursor: grab;

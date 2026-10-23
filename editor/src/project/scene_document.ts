@@ -1,3 +1,5 @@
+import { empty_layer } from './tilemap'
+
 export type Vec2 = [number, number]
 export type Vec4 = [number, number, number, number]
 
@@ -48,6 +50,24 @@ export type Collider = {
   sensor: boolean
 }
 
+export type TilemapLayer = {
+  // One string per row from the top, holding the row's tile numbers separated by spaces; 0 is an empty cell.
+  rows: string[]
+}
+
+// The transform's position is the top-left corner of the map.
+export type Tilemap = {
+  // Asset id of the tileset, or empty for none.
+  tileset: string
+  // In world units, before the transform's scale.
+  cell_size: Vec2
+  // In cells.
+  size: Vec2
+  // Later layers are drawn on top.
+  layers: TilemapLayer[]
+  order: number
+}
+
 // Asset ids of the scripts that drive the entity, run in list order.
 export type Scripts = {
   assets: string[]
@@ -59,6 +79,7 @@ export type Components = {
   rigidbody?: Rigidbody
   collider?: Collider
   animator?: Animator
+  tilemap?: Tilemap
   scripts?: Scripts
 }
 
@@ -92,5 +113,6 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     sensor: false,
   }),
   animator: () => ({ animation_set: '', clip: '' }),
+  tilemap: () => ({ tileset: '', cell_size: [1, 1], size: [16, 16], layers: [empty_layer([16, 16])], order: 0 }),
   scripts: () => ({ assets: [] }),
 }

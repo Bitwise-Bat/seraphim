@@ -2,6 +2,7 @@ import { useEffect, type RefObject } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
 import type { Vec2 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
+import { painted_entity } from './tilemap_tool_store'
 
 type ActiveDrag = {
   id: string
@@ -18,7 +19,7 @@ function canvas_pixel(canvas: HTMLCanvasElement, event: PointerEvent): Vec2 {
   ]
 }
 
-function world_at(engine: MainModule, canvas: HTMLCanvasElement, event: PointerEvent): Vec2 | undefined {
+export function world_at(engine: MainModule, canvas: HTMLCanvasElement, event: PointerEvent): Vec2 | undefined {
   const world = engine.Engine.screen_to_world(...canvas_pixel(canvas, event)) as { x: number; y: number } | null
   return world ? [world.x, world.y] : undefined
 }
@@ -33,7 +34,7 @@ export function useViewportDrag(canvas_ref: RefObject<HTMLCanvasElement | null>,
     let active: ActiveDrag | undefined
 
     function on_pointer_down(event: PointerEvent) {
-      if (!canvas || !engine || event.button !== 0) {
+      if (!canvas || !engine || event.button !== 0 || painted_entity()) {
         return
       }
       const { document, select } = useSceneStore.getState()

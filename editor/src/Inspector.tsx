@@ -16,9 +16,13 @@ import {
   type SceneEntity,
   type Scripts,
   type Sprite,
+  type Tilemap,
   type Transform,
 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
+import { empty_layer, is_tileset_name, resize_tilemap } from './project/tilemap'
+import { TilePalette } from './TilePalette'
+import { useTilemapToolStore, type TilemapTool } from './tilemap_tool_store'
 
 type NumberFieldProps = {
   label: string
@@ -160,12 +164,13 @@ type AssetFieldProps = {
   asset: string
   placeholder: string
   clear_label?: string
+  accepts?: (name: string) => boolean
   on_change: (asset: string) => void
 }
 
-function AssetField({ store, asset, placeholder, clear_label = 'Clear', on_change }: AssetFieldProps) {
+function AssetField({ store, asset, placeholder, clear_label = 'Clear', accepts, on_change }: AssetFieldProps) {
   const root = useStore(store, (state) => state.root)
-  const drop = useAssetFileDrop(store, on_change)
+  const drop = useAssetFileDrop(store, on_change, accepts)
   const file = root && asset ? find_file_by_id(root, asset) : undefined
   const label = !asset ? placeholder : (file?.path ?? `Missing asset ${asset}`)
 
@@ -338,6 +343,102 @@ function AnimatorFields({ value, on_change }: { value: Animator; on_change: (val
   )
 }
 
+const tilemap_tools: { value: TilemapTool; label: string }[] = [
+  { value: 'select', label: 'Select' },
+  { value: 'brush', label: 'Brush' },
+  { value: 'eraser', label: 'Eraser' },
+  { value: 'fill', label: 'Fill' },
+]
+
+function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value: Tilemap) => void }) {
+  const tool = useTilemapToolStore((store) => store.tool)
+  const stored_layer = useTilemapToolStore((store) => store.layer)
+  const { set_tool, set_layer } = useTilemapToolStore.getState()
+  // The stored layer may belong to another tilemap with more layers.
+  const layer = Math.min(stored_layer, value.layers.length - 1)
+
+  return (
+    <>
+      <Row label="Tileset">
+        <AssetField
+          store={useAssetStore}
+          asset={value.tileset}
+          placeholder="Drop a .tileset.json here"
+          accepts={is_tileset_name}
+          on_change={(tileset) => on_change({ ...value, tileset })}
+        />
+      </Row>
+      <Row label="Cell size">
+        <VectorFields
+          labels={['W', 'H']}
+          values={value.cell_size}
+          on_change={(cell_size) => on_change({ ...value, cell_size })}
+        />
+      </Row>
+      <Row label="Cells">
+        <VectorFields
+          labels={['W', 'H']}
+          values={value.size}
+          on_change={([width, height]) =>
+            on_change(resize_tilemap(value, [Math.max(1, Math.round(width)), Math.max(1, Math.round(height))]))
+          }
+        />
+      </Row>
+      <Row label="Order">
+        <NumberField
+          label="#"
+          step={1}
+          value={value.order}
+          on_change={(order) => on_change({ ...value, order: Math.round(order) })}
+        />
+      </Row>
+      <Row label="Layer">
+        {value.layers.length > 0 && (
+          <SelectField
+            label="Layer"
+            value={String(layer)}
+            options={value.layers.map((_, index) => ({ value: String(index), label: `Layer ${index + 1}` }))}
+            on_change={(index) => set_layer(Number(index))}
+          />
+        )}
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => {
+            on_change({ ...value, layers: [...value.layers, empty_layer(value.size)] })
+            set_layer(value.layers.length)
+          }}
+        >
+          Add
+        </button>
+        {value.layers.length > 0 && (
+          <button
+            type="button"
+            className="toolbar-button"
+            onClick={() => on_change({ ...value, layers: value.layers.filter((_, index) => index !== layer) })}
+          >
+            Remove
+          </button>
+        )}
+      </Row>
+      <Row label="Tool">
+        {tilemap_tools.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className="toolbar-button"
+            aria-pressed={tool === option.value}
+            onClick={() => set_tool(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </Row>
+      <TilePalette tileset={value.tileset} />
+    </>
+  )
+}
+
 function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value: Scripts) => void }) {
   return (
     <div className="inspector-list">
@@ -374,6 +475,7 @@ const component_titles: Record<ComponentName, string> = {
   rigidbody: 'Rigidbody',
   collider: 'Collider',
   animator: 'Animator',
+  tilemap: 'Tilemap',
   scripts: 'Scripts',
 }
 
@@ -399,7 +501,7 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite, rigidbody, collider, animator, scripts } = entity.components
+  const { transform, sprite, rigidbody, collider, animator, tilemap, scripts } = entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -445,6 +547,11 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
       {animator && (
         <ComponentSection name="animator" on_remove={() => set_component('animator', undefined)}>
           <AnimatorFields value={animator} on_change={(value) => set_component('animator', value)} />
+        </ComponentSection>
+      )}
+      {tilemap && (
+        <ComponentSection name="tilemap" on_remove={() => set_component('tilemap', undefined)}>
+          <TilemapFields value={tilemap} on_change={(value) => set_component('tilemap', value)} />
         </ComponentSection>
       )}
       {scripts && (
