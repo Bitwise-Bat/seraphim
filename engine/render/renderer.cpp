@@ -99,13 +99,15 @@ void renderer::poll()
     m_instance.ProcessEvents();
 }
 
+float renderer::aspect() const
+{
+    return m_height > 0 ? static_cast<float>(m_width) / static_cast<float>(m_height) : 1.0F;
+}
+
 void renderer::begin(const camera2d& camera)
 {
-    if (!m_sprites)
-        return;
-
-    const float aspect = m_height > 0 ? static_cast<float>(m_width) / static_cast<float>(m_height) : 1.0F;
-    m_sprites->begin(camera.view_projection(aspect));
+    if (m_sprites)
+        m_sprites->begin(camera.view_projection(aspect()));
 }
 
 void renderer::draw(const sprite& item)

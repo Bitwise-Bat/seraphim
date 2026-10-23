@@ -255,7 +255,8 @@ std::optional<tilemap> read_tilemap(const json& value)
 {
     tilemap out;
     if (!value.is_object() || !read_field(value, "tileset", out.tileset) ||
-        !read_field(value, "cell_size", out.cell_size) || !read_field(value, "size", out.size))
+        !read_field(value, "cell_size", out.cell_size) || !read_field(value, "size", out.size) ||
+        !read_field(value, "order", out.order))
         return std::nullopt;
 
     const auto layers = value.find("layers");
@@ -450,10 +451,9 @@ std::string serialize_scene(const scene& scene)
             for (const auto& tiles : map->layers)
                 layers.push_back(write_layer(tiles, map->size));
             components["tilemap"] = {
-                {"tileset", map->tileset},
-                {"cell_size", write(map->cell_size)},
-                {"size", write(map->size)},
-                {"layers", std::move(layers)},
+                {"tileset", map->tileset},  {"cell_size", write(map->cell_size)},
+                {"size", write(map->size)}, {"layers", std::move(layers)},
+                {"order", map->order},
             };
         }
         if (const auto* list = registry.try_get<scripts>(entity))

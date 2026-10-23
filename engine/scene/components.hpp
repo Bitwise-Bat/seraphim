@@ -109,6 +109,8 @@ struct tilemap
     // Each layer holds size.x * size.y tile numbers row by row, where 0 is an empty cell. Later layers are drawn on
     // top.
     std::vector<std::vector<std::uint16_t>> layers;
+    // Sorted together with sprite orders, so sprites can stand in front of or behind the whole map.
+    std::int32_t order = 0;
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.

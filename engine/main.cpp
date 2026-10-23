@@ -363,7 +363,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     state.assets->update();
     state.renderer.begin(state.camera);
-    state.sprites.draw(state.scene, *state.assets, state.renderer);
+    state.sprites.draw(state.scene, *state.assets, state.renderer, state.camera);
     state.renderer.end(*state.assets);
     return SDL_APP_CONTINUE;
 }

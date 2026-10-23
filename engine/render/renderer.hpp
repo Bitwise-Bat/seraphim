@@ -38,6 +38,8 @@ class renderer
 
     // Null until the browser has granted a device.
     [[nodiscard]] const wgpu::Device& device() const { return m_device; }
+    // Width over height of the viewport, or 1 before it has a size.
+    [[nodiscard]] float aspect() const;
     // In pixels, as last passed to resize().
     [[nodiscard]] glm::vec2 viewport_size() const { return {m_width, m_height}; }
 
