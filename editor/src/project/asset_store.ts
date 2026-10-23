@@ -32,6 +32,7 @@ export type AssetStore = {
   move: (source_path: string, entry: AssetEntry, target_path: string) => Promise<void>
   remove: (entry: AssetEntry) => Promise<void>
   navigate: (path: string) => void
+  find_id: (entry :AssetEntry, path: string) => Promise<string> | null
 }
 
 function error_message(error: unknown): string {
@@ -94,6 +95,28 @@ function create_asset_store(folder: string, extensions?: string[]): AssetStoreHo
     return {
       folder,
       current_path: '',
+      
+      find_id: async (entry: AssetEntry, path: string) : Promise<string | null> => {
+        const root = get().root;
+        if (!root) return null;
+        
+        const index = path.lastIndexOf("/");
+        const folder_path = index === -1 ? "" : path.slice(0, index);
+        
+        try {
+          const folder_handle = folder_at(root, folder_path).handle;
+          const file_handle = await folder_handle.getFileHandle(entry.name + ".meta");
+          const file = await file_handle.getFile();
+          const text = await file.text();
+
+          const obj = JSON.parse(text);
+          return obj.id;
+        }
+        catch(err){
+          console.error(err);
+          return null;
+        }
+      },
 
       scan: (project) =>
         serialized(async () => {

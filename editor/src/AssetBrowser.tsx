@@ -145,6 +145,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   const create_file_in_current = useBrowserStore((store) => store.create_file_in_current)
   const rename = useBrowserStore((store) => store.rename)
   const remove = useBrowserStore((store) => store.remove)
+  const find_id = useBrowserStore((store) => store.find_id);
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
@@ -204,17 +205,32 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
       void remove(entry)
     }
   }
+  
+  async function copy_uuid(entry: AssetEntry, path: string){
+    const id = await find_id(entry, path);
+    if (!id) return console.error("File doesn't have UUID");
+    await navigator.clipboard.writeText(id);
+  }
 
   function tile_props(entry: AssetEntry) {
+    const path = join_path(current_path, entry.name);
+    
     return {
       entry,
-      path: join_path(current_path, entry.name),
+      path: path,
       renaming: renaming === entry.name,
-      on_context_menu: (event: MouseEvent) =>
-        open_menu(event, [
-          { label: 'Rename', action: () => set_renaming(entry.name) },
-          { label: 'Delete', action: () => confirm_delete(entry) },
-        ]),
+      on_context_menu: (event: MouseEvent) => {
+        const context_options : ContextMenuItem[] = [];
+
+        if (entry.kind === "file")
+          context_options.push({ label: "Copy UUID", action: () => copy_uuid(entry, path)});
+
+        context_options.push(
+            { label: 'Rename', action: () => set_renaming(entry.name) },
+            { label: 'Delete', action: () => confirm_delete(entry) },
+        );
+        open_menu(event, context_options)
+      },
       on_rename: (new_name: string) => void rename(entry, new_name),
       on_rename_end: () => set_renaming(undefined),
     }
