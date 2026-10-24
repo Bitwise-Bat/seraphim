@@ -97,7 +97,7 @@ export async function start_scripts(
   for (const instance of instances) {
     call(instance, 'on_start')
   }
-  engine.Engine.set_tick_handler(() => {
+  engine.World.set_tick_handler(() => {
     for (const instance of instances) {
       call(instance, 'on_tick')
     }
@@ -106,7 +106,7 @@ export async function start_scripts(
 
   return {
     stop() {
-      engine.Engine.set_tick_handler(null)
+      engine.World.set_tick_handler(null)
       for (const instance of instances) {
         call(instance, 'on_stop')
       }

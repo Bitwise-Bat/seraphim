@@ -16,13 +16,14 @@ export const running = { script: '' }
 
 export function create_api(engine: MainModule) {
   const api = engine.Engine
+  const world = engine.World
 
   function read_transform(id: string): EngineTransform {
-    return (api.get_transform(id) as EngineTransform | null) ?? identity_transform
+    return (world.get_transform(id) as EngineTransform | null) ?? identity_transform
   }
 
   function write_transform(id: string, { x, y, rotation, scale_x, scale_y }: EngineTransform): void {
-    api.set_transform(id, x, y, rotation, scale_x, scale_y)
+    world.set_transform(id, x, y, rotation, scale_x, scale_y)
   }
 
   class Animator {
@@ -33,11 +34,11 @@ export function create_api(engine: MainModule) {
     }
 
     get clip(): string {
-      return api.get_clip(this.id) ?? ''
+      return world.get_clip(this.id) ?? ''
     }
 
     set clip(clip: string) {
-      api.set_clip(this.id, clip)
+      world.set_clip(this.id, clip)
     }
   }
 
@@ -49,12 +50,12 @@ export function create_api(engine: MainModule) {
     }
 
     get velocity(): Vec2 {
-      const v = api.get_velocity(this.id)
+      const v = world.get_velocity(this.id)
       return v ? [v.x, v.y] : [0, 0]
     }
 
     set velocity([x, y]: Vec2) {
-      api.set_velocity(this.id, x, y)
+      world.set_velocity(this.id, x, y)
     }
   }
 
@@ -94,18 +95,18 @@ export function create_api(engine: MainModule) {
     }
 
     find_path([sx, sy]: Vec2, [ex, ey]: Vec2, blocking_layer: number): Vec2[] | undefined {
-      const path = api.find_path(this.id, blocking_layer, sx, sy, ex, ey) as { x: number; y: number }[] | null
+      const path = world.find_path(this.id, blocking_layer, sx, sy, ex, ey) as { x: number; y: number }[] | null
       return path?.map(({ x, y }): Vec2 => [x, y])
     }
 
     // The engine answers with an { x, y } object, but scripts pass cells straight back into find_path as Vec2.
     get_cell_at_coord(x: number, y: number): Vec2 | undefined {
-      const cell = api.get_cell_at_coord(this.id, x, y) as { x: number; y: number } | null
+      const cell = world.get_cell_at_coord(this.id, x, y) as { x: number; y: number } | null
       return cell ? [cell.x, cell.y] : undefined
     }
 
     get_cell_center([x, y]: Vec2): Vec2 | undefined {
-      const center = api.get_cell_center(this.id, x, y) as { x: number; y: number } | null
+      const center = world.get_cell_center(this.id, x, y) as { x: number; y: number } | null
       return center ? [center.x, center.y] : undefined
     }
   }
@@ -129,17 +130,17 @@ export function create_api(engine: MainModule) {
     }
 
     get body(): Body | undefined {
-      this.#body ??= api.has_body(this.id) ? new Body(this.id) : null
+      this.#body ??= world.has_body(this.id) ? new Body(this.id) : null
       return this.#body ?? undefined
     }
     
     get animator(): Animator | undefined {
-      this.#animator ??= api.has_animator(this.id) ? new Animator(this.id) : null
+      this.#animator ??= world.has_animator(this.id) ? new Animator(this.id) : null
       return this.#animator ?? undefined
     }
 
     get tilemap(): Tilemap | undefined {
-      this.#tilemap ??= api.has_tilemap(this.id) ? new Tilemap(this.id) : null
+      this.#tilemap ??= world.has_tilemap(this.id) ? new Tilemap(this.id) : null
       return this.#tilemap ?? undefined
     }
 
@@ -216,7 +217,7 @@ export function create_api(engine: MainModule) {
   }
 
   function find_entity(name: string): Entity | undefined {
-    const id = api.find_entity(name)
+    const id = world.find_entity(name)
     return id ? new Entity(id, name) : undefined
   }
 

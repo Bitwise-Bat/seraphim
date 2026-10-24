@@ -12,17 +12,27 @@ endfunction()
 
 seraphim_embed_shader(sprite render/shaders/sprite.wgsl)
 
-add_executable(seraphim main.cpp asset/animation_set_file.cpp asset/asset_manager.cpp asset/asset_sources.cpp asset/image_loader.cpp asset/tileset_file.cpp
-    asset/text_loader.cpp core/fixed_timestep.cpp core/log.cpp
-    platform/audio.cpp platform/input.cpp platform/window.cpp render/camera2d.cpp render/renderer.cpp render/sprite_renderer.cpp
-    render/texture2d.cpp scene/animation_system.cpp scene/audio_system.cpp scene/physics_system.cpp scene/picking.cpp scene/scene.cpp scene/scene_file.cpp scene/sprite_system.cpp
-    scene/navigator_grid.cpp)
 find_package(box2d CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-target_link_libraries(seraphim PRIVATE box2d::box2d EnTT::EnTT glm::glm-header-only jps::jps nlohmann_json::nlohmann_json)
-target_include_directories(seraphim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+# Simulation shared by the browser client and the headless server; nothing here may depend on SDL or WebGPU.
+add_library(seraphim_sim STATIC asset/animation_set_file.cpp asset/tileset_file.cpp core/fixed_timestep.cpp core/log.cpp
+    scene/navigator_grid.cpp scene/physics_system.cpp scene/scene.cpp scene/scene_file.cpp scene/world.cpp)
+target_link_libraries(seraphim_sim PUBLIC box2d::box2d EnTT::EnTT glm::glm-header-only jps::jps nlohmann_json::nlohmann_json)
+target_include_directories(seraphim_sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+# EMSCRIPTEN_BINDINGS registers from a static initializer nothing references, so linking it from a static library
+# would drop it.
+add_library(seraphim_world_bindings OBJECT bindings/world.cpp)
+target_link_libraries(seraphim_world_bindings PUBLIC seraphim_sim)
+
+add_executable(seraphim main.cpp asset/asset_manager.cpp asset/asset_sources.cpp asset/image_loader.cpp
+    asset/text_loader.cpp platform/audio.cpp platform/input.cpp platform/window.cpp render/camera2d.cpp render/renderer.cpp
+    render/sprite_renderer.cpp render/texture2d.cpp scene/animation_system.cpp scene/audio_system.cpp scene/picking.cpp
+    scene/sprite_system.cpp)
+target_link_libraries(seraphim PRIVATE seraphim_world_bindings)
 target_compile_options(seraphim PRIVATE -sUSE_SDL=3 --use-port=emdawnwebgpu)
 set_target_properties(seraphim PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_options(seraphim PRIVATE

@@ -87,7 +87,7 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
           return
         }
         // The engine fills in missing fields and drops unknown components, so its copy is what the editor edits.
-        set({ document: JSON.parse(next_engine.Engine.save_scene()) as SceneDocument })
+        set({ document: JSON.parse(next_engine.World.save_scene()) as SceneDocument })
       } catch (error) {
         set({ error: error_message(error) })
       }
@@ -101,7 +101,7 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       push_to_engine()
       const saved = get().document
       // Writing the engine's serialization keeps the file format owned by one place.
-      const text = engine.Engine.save_scene()
+      const text = engine.World.save_scene()
       // The engine returns nothing once it has stopped running; writing that would wipe the scene file.
       if (!text) {
         set({ error: 'Saving failed: the engine is not running, so the scene file was left unchanged' })
