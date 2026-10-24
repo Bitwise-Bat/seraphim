@@ -586,7 +586,7 @@ SDL_AppResult SDL_AppIterate(void* appstate)
             if (state.assets)
             {
                 seraphim::scene::animation_system::update(state.scene.registry(), *state.assets, tick_seconds);
-                seraphim::scene::audio_system::update(state.scene.registry(), *state.assets);
+                seraphim::scene::audio_system::update(state.scene.registry(), *state.assets, state.camera);
             }
         }
         // Edges belong to the first tick only, so a single press cannot fire twice when a slow frame runs several

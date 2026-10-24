@@ -215,7 +215,8 @@ std::optional<audio_source> read_audio_source(const json& value)
 {
     audio_source out;
     if (!value.is_object() || !read_field(value, "sound", out.sound) || !read_field(value, "volume", out.volume) ||
-        !read_field(value, "loop", out.loop) || !read_field(value, "play_on_start", out.play_on_start))
+        !read_field(value, "loop", out.loop) || !read_field(value, "play_on_start", out.play_on_start) ||
+        !read_field(value, "spatial", out.spatial))
         return std::nullopt;
     return out;
 }
@@ -463,10 +464,9 @@ std::string serialize_scene(const scene& scene)
             components["animator"] = {{"animation_set", player->animation_set}, {"clip", player->clip}};
         if (const auto* source = registry.try_get<audio_source>(entity))
             components["audio_source"] = {
-                {"sound", source->sound},
-                {"volume", source->volume},
-                {"loop", source->loop},
-                {"play_on_start", source->play_on_start},
+                {"sound", source->sound},     {"volume", source->volume},
+                {"loop", source->loop},       {"play_on_start", source->play_on_start},
+                {"spatial", source->spatial},
             };
         if (const auto* map = registry.try_get<tilemap>(entity))
         {

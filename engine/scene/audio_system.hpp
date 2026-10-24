@@ -7,6 +7,11 @@ namespace seraphim::asset
 class asset_manager;
 }
 
+namespace seraphim::render
+{
+class camera2d;
+}
+
 namespace seraphim::scene
 {
 
@@ -22,7 +27,7 @@ class audio_system
     // Plays the sources marked to play on start.
     static void start(entt::registry& registry, const asset::asset_manager& assets);
     // Starts the plays that were waiting for their sound to load.
-    static void update(entt::registry& registry, const asset::asset_manager& assets);
+    static void update(entt::registry& registry, const asset::asset_manager& assets, const render::camera2d& camera);
 
     // Restarts the sound if it is already playing.
     static void play(audio_source& source, const asset::asset_manager& assets);

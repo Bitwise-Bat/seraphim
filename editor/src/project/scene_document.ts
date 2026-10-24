@@ -58,6 +58,8 @@ export type AudioSource = {
   volume: number
   loop: boolean
   play_on_start: boolean
+  // Pans and fades the sound by the entity's position relative to the camera.
+  spatial: boolean
 }
 
 export type TilemapLayer = {
@@ -124,7 +126,7 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     sensor: false,
   }),
   animator: () => ({ animation_set: '', clip: '' }),
-  audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false }),
+  audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false, spatial: false }),
   tilemap: () => ({ tileset: '', cell_size: [1, 1], size: [16, 16], layers: [empty_layer([16, 16])], order: 0 }),
   scripts: () => ({ assets: [] }),
 }

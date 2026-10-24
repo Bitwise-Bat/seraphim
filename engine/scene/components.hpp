@@ -126,6 +126,8 @@ struct audio_source
     float volume = 1.0F;
     bool loop = false;
     bool play_on_start = false;
+    // Pans and fades the sound by the entity's position relative to the camera.
+    bool spatial = false;
     // Set while a play waits for the sound to finish loading.
     bool pending = false;
     std::optional<platform::voice> voice;

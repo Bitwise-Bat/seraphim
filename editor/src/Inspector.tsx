@@ -496,6 +496,9 @@ function AudioSourceFields({ value, on_change }: { value: AudioSource; on_change
           on_change={(play_on_start) => on_change({ ...value, play_on_start })}
         />
       </Row>
+      <Row label="Spatial">
+        <CheckboxField label="Spatial" value={value.spatial} on_change={(spatial) => on_change({ ...value, spatial })} />
+      </Row>
     </>
   )
 }

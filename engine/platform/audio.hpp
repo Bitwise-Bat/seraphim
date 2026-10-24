@@ -29,6 +29,11 @@ void release_sound(sound_request sound);
 
 // Voices that do not loop end on their own once the sound is over.
 [[nodiscard]] voice play_sound(sound_request sound, float volume, bool loop);
+// Like play_sound, but panned and faded by its distance from the listener. Positions are in world units.
+[[nodiscard]] voice play_sound_spatial(sound_request sound, float volume, bool loop, float x, float y);
+void set_voice_position(voice voice, float x, float y);
+// Counter-clockwise, in radians, like the transform's rotation.
+void update_listener(float x, float y, float rotation);
 void stop_voice(voice voice);
 void set_voice_volume(voice voice, float volume);
 [[nodiscard]] bool is_voice_playing(voice voice);

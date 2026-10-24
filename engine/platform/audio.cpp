@@ -69,6 +69,73 @@ EM_JS(void, seraphim_play_sound, (std::uint32_t sound, std::uint32_t voice, floa
     source.start();
 });
 
+// World y maps onto the audio scene's -z, so the plane of the game is the horizontal plane around the listener.
+EM_JS(void, seraphim_play_sound_spatial, (std::uint32_t sound, std::uint32_t voice, float volume, int loop, float x, float y), {
+    const audio = Module.seraphimAudio;
+    const buffer = audio.sounds.get(sound);
+    if (!buffer)
+        return;
+
+    audio.context.resume();
+
+    const gain = audio.context.createGain();
+    gain.gain.value = volume;
+
+    const panner = audio.context.createPanner();
+    panner.panningModel = 'HRTF';
+    panner.distanceModel = "inverse";
+    panner.refDistance = 1.0;
+    panner.maxDistance = 10000.0;
+    panner.rolloffFactor = 1.0;
+
+    panner.positionX.value = x;
+    panner.positionY.value = 0;
+    panner.positionZ.value = -y;
+
+    const source = audio.context.createBufferSource();
+    source.buffer = buffer;
+    source.loop = loop !== 0;
+
+    source.connect(gain);
+    gain.connect(panner);
+    panner.connect(audio.context.destination);
+
+    source.onended = () => {
+        gain.disconnect();
+        panner.disconnect();
+        audio.voices.delete(voice);
+    };
+
+    audio.voices.set(voice, {source, gain, panner});
+    source.start();
+});
+
+EM_JS(void, seraphim_set_voice_position, (std::uint32_t voice, float x, float y), {
+    const audio = Module.seraphimAudio;
+    const playing = audio.voices.get(voice);
+    if (playing && playing.panner) {
+        playing.panner.positionX.value = x;
+        playing.panner.positionY.value = 0.0;
+        playing.panner.positionZ.value = -y;
+    }
+});
+
+EM_JS(void, seraphim_update_listener, (float x, float y, float rotation), {
+    const listener = Module.seraphimAudio.context.listener;
+
+    listener.positionX.value = x;
+    listener.positionY.value = 0.0;
+    listener.positionZ.value = -y;
+
+    listener.forwardX.value = -Math.sin(rotation);
+    listener.forwardY.value = 0.0;
+    listener.forwardZ.value = -Math.cos(rotation);
+
+    listener.upX.value = 0.0;
+    listener.upY.value = 1.0;
+    listener.upZ.value = 0.0;
+});
+
 EM_JS(void, seraphim_stop_voice, (std::uint32_t voice), {
     const audio = Module.seraphimAudio;
     const playing = audio.voices.get(voice);
@@ -78,6 +145,7 @@ EM_JS(void, seraphim_stop_voice, (std::uint32_t voice), {
     playing.source.onended = null;
     playing.source.stop();
     playing.gain.disconnect();
+    playing.panner?.disconnect();
     audio.voices.delete(voice);
 });
 
@@ -97,6 +165,7 @@ EM_JS(void, seraphim_stop_all_voices, (), {
         playing.source.onended = null;
         playing.source.stop();
         playing.gain.disconnect();
+        playing.panner?.disconnect();
     }
     audio.voices.clear();
 });
@@ -146,6 +215,26 @@ void release_sound(sound_request sound)
 {
     initialize();
     seraphim_release_sound(sound);
+}
+
+void set_voice_position(voice voice, float x, float y)
+{
+    initialize();
+    seraphim_set_voice_position(voice, x, y);
+}
+
+void update_listener(float x, float y, float rotation)
+{
+    initialize();
+    seraphim_update_listener(x, y, rotation);
+}
+
+voice play_sound_spatial(sound_request sound, float volume, bool loop, float x, float y)
+{
+    initialize();
+    const voice played = g_next_voice++;
+    seraphim_play_sound_spatial(sound, played, volume, loop ? 1 : 0, x, y);
+    return played;
 }
 
 voice play_sound(sound_request sound, float volume, bool loop)

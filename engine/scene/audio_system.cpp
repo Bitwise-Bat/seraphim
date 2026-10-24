@@ -2,6 +2,7 @@
 
 #include "asset/asset_manager.hpp"
 #include "platform/audio.hpp"
+#include "render/camera2d.hpp"
 #include "scene/components.hpp"
 
 #include <algorithm>
@@ -24,11 +25,17 @@ void audio_system::start(entt::registry& registry, const asset::asset_manager& a
             play(source, assets);
 }
 
-void audio_system::update(entt::registry& registry, const asset::asset_manager& assets)
+void audio_system::update(entt::registry& registry, const asset::asset_manager& assets, const render::camera2d& camera)
 {
     for (const auto [entity, source] : registry.view<audio_source>().each())
         if (source.pending)
             play(source, assets);
+
+    for (const auto [entity, source, placement] : registry.view<audio_source, transform>().each())
+        if (source.spatial && source.voice)
+            platform::set_voice_position(*source.voice, placement.position.x, placement.position.y);
+
+    platform::update_listener(camera.position.x, camera.position.y, 0.0F);
 }
 
 void audio_system::play(audio_source& source, const asset::asset_manager& assets)
@@ -41,7 +48,9 @@ void audio_system::play(audio_source& source, const asset::asset_manager& assets
         source.pending = source.handle.valid();
         return;
     }
-    source.voice = platform::play_sound(sound->samples, std::max(source.volume, 0.0F), source.loop);
+    const float volume = std::max(source.volume, 0.0F);
+    source.voice = source.spatial ? platform::play_sound_spatial(sound->samples, volume, source.loop, 0.0F, 0.0F)
+                                  : platform::play_sound(sound->samples, volume, source.loop);
 }
 
 void audio_system::stop(audio_source& source)
