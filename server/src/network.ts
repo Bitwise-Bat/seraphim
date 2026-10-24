@@ -11,6 +11,8 @@ export type Connection = {
 export type NetworkEvents = {
   connected: (connection: Connection) => void
   disconnected: (connection: Connection) => void
+  // Messages that are not JSON never get here.
+  received: (connection: Connection, message: unknown) => void
 }
 
 // Accepts WebSocket connections on the port and reports them; it knows nothing about the game.
@@ -24,6 +26,16 @@ export function start_network(port: number, events: NetworkEvents): void {
         const connection = socket.getUserData()
         connection.id = next_id++
         events.connected(connection)
+      },
+      message: (socket, data) => {
+        // The data is only valid during this callback, so it is decoded right away.
+        let message: unknown
+        try {
+          message = JSON.parse(Buffer.from(data).toString())
+        } catch {
+          return
+        }
+        events.received(socket.getUserData(), message)
       },
       close: (socket) => {
         events.disconnected(socket.getUserData())

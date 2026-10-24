@@ -1,5 +1,6 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { create } from 'zustand'
+import { connect_to_server, type ServerConnection } from '../network/server_connection'
 import { start_scripts, type ScriptRun } from '../scripting/script_host'
 import { useScriptStore } from './asset_store'
 import { component_defaults, type SceneDocument, type SceneEntity, type Vec2 } from './scene_document'
@@ -35,6 +36,7 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
   let engine: MainModule | undefined
   let push_frame: number | undefined
   let scripts: ScriptRun | undefined
+  let connection: ServerConnection | undefined
   // Compiling scripts takes a moment, during which a second click on Play must not start another run.
   let starting = false
 
@@ -126,6 +128,7 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         push_to_engine()
         scripts = await start_scripts(engine, project, document, useScriptStore.getState().root)
         engine.Engine.start_simulation()
+        connection = connect_to_server(engine)
         set({ playing: true, error: undefined })
       } catch (error) {
         set({ error: `Play failed: ${error_message(error)}` })
@@ -138,6 +141,8 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       if (!engine || !get().playing) {
         return
       }
+      connection?.close()
+      connection = undefined
       scripts?.stop()
       scripts = undefined
       engine.Engine.stop_simulation()

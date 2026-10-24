@@ -5,6 +5,7 @@ import create_engine from '../../build/web-debug/seraphim_server.mjs'
 import { run_scripts, type ScriptedEntity } from '../../runtime/script_host.ts'
 import { create_world_api } from '../../runtime/world_api.ts'
 import { start_network } from './network.js'
+import { create_players } from './players.js'
 
 const port = 9001
 const tick_rate = 60
@@ -36,14 +37,23 @@ if (existsSync(bundle_path)) {
   console.warn(`${bundle_path} is missing, so no scripts run; pressing Play in the editor writes it`)
 }
 const { entities } = JSON.parse(scene_text) as { entities: ScriptedEntity[] }
-run_scripts(engine.World, create_world_api(engine.World, tick_ms / 1000), code, entities)
+const players = create_players()
+const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list }
+run_scripts(engine.World, api, code, entities)
 
 engine.Server.start_simulation()
 console.log(`Simulating ${scene_path} at ${tick_rate} Hz`)
 
 start_network(port, {
-  connected: (connection) => console.log(`Connection ${connection.id} opened`),
-  disconnected: (connection) => console.log(`Connection ${connection.id} closed`),
+  connected: (connection) => {
+    players.add(connection.id)
+    console.log(`Player ${connection.id} joined`)
+  },
+  disconnected: (connection) => {
+    players.remove(connection.id)
+    console.log(`Player ${connection.id} left`)
+  },
+  received: (connection, message) => players.receive(connection.id, message),
 })
 
 function log_watched(tick: number): void {

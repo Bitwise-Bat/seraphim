@@ -123,6 +123,16 @@ export const script_types = {
 
   // Returns the first entity with the name.
   export function find_entity(name: string): Entity | undefined
+
+  export type Player = {
+    // Stays the same while the player is connected.
+    readonly id: number
+    // The keys the player's client holds down, as it last reported them.
+    readonly input: { is_down(key: Key): boolean }
+  }
+
+  // Only works on the game server: the players connected right now, in the order they joined.
+  export function players(): Player[]
 }
 `,
 }
