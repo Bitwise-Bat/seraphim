@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
 import { useCameraStore } from './camera_store'
+import { useSceneStore } from './project/scene_store'
 
 // Each wheel notch scales the view by the same factor, so zooming feels equally fast at every distance.
 const zoom_step = 1.1
@@ -9,6 +10,9 @@ const pan_buttons = new Set([1, 2])
 
 // Pans with the middle or right mouse button and zooms around the cursor with the wheel.
 export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engine: MainModule | undefined) {
+  // Scripts may move the camera while the scene plays, so the editor keeps its hands off it until play stops.
+  const playing = useSceneStore((store) => store.playing)
+
   useEffect(() => {
     const canvas = canvas_ref.current
     if (!canvas || !engine) {
@@ -31,7 +35,7 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
     }
 
     function on_pointer_move(event: PointerEvent) {
-      if (!panning) {
+      if (!panning || playing) {
         return
       }
       const { position, view_height } = useCameraStore.getState()
@@ -45,7 +49,7 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
     }
 
     function on_wheel(event: WheelEvent) {
-      if (!canvas) {
+      if (!canvas || playing) {
         return
       }
       event.preventDefault()
@@ -83,5 +87,5 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
       canvas.removeEventListener('wheel', on_wheel)
       canvas.removeEventListener('contextmenu', on_context_menu)
     }
-  }, [canvas_ref, engine])
+  }, [canvas_ref, engine, playing])
 }
