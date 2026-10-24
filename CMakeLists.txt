@@ -12,3 +12,4 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 add_subdirectory(third_party/jps)
 add_subdirectory(engine)
+add_subdirectory(server)
