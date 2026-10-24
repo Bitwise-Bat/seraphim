@@ -1,0 +1,5 @@
+{
+  "name": "seraphim-runtime",
+  "private": true,
+  "type": "module"
+}

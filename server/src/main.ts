@@ -1,5 +1,9 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import create_engine from '../../build/web-debug/seraphim_server.mjs'
+import { run_scripts, type ScriptedEntity } from '../../runtime/script_host.ts'
+import { create_world_api } from '../../runtime/world_api.ts'
 import { start_network } from './network.js'
 
 const port = 9001
@@ -8,18 +12,32 @@ const tick_ms = 1000 / tick_rate
 // Matches core::fixed_timestep: after a stall the server skips time instead of running a burst of catch-up ticks.
 const max_frame_ms = 250
 
-const [scene_path, watched_name] = process.argv.slice(2)
-if (!scene_path) {
-  console.error('Usage: npm start -- <path to a .scene.json> [entity name to log]')
+const [project_path, watched_name] = process.argv.slice(2)
+if (!project_path) {
+  console.error('Usage: npm start -- <project folder> [entity name to log]')
   process.exit(1)
 }
 
+const scene_path = join(project_path, 'scenes', 'main.scene.json')
+const scene_text = await readFile(scene_path, 'utf8')
 const engine = await create_engine()
-const problem = engine.Server.load_scene(await readFile(scene_path, 'utf8'))
+const problem = engine.Server.load_scene(scene_text)
 if (problem) {
   console.error(`The scene was rejected: ${problem}`)
   process.exit(1)
 }
+
+// The editor writes the bundle on Play, so the server runs the scripts as the last Play compiled them.
+const bundle_path = join(project_path, '.seraphim', 'scripts.js')
+let code = ''
+if (existsSync(bundle_path)) {
+  code = await readFile(bundle_path, 'utf8')
+} else {
+  console.warn(`${bundle_path} is missing, so no scripts run; pressing Play in the editor writes it`)
+}
+const { entities } = JSON.parse(scene_text) as { entities: ScriptedEntity[] }
+run_scripts(engine.World, create_world_api(engine.World, tick_ms / 1000), code, entities)
+
 engine.Server.start_simulation()
 console.log(`Simulating ${scene_path} at ${tick_rate} Hz`)
 

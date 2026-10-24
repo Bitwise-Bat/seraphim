@@ -74,6 +74,12 @@ export async function write_script_setup(directory: FileSystemDirectoryHandle): 
   }
 }
 
+// Holds the scripts as the last Play compiled them, for the server to run.
+export async function write_scripts_bundle(directory: FileSystemDirectoryHandle, code: string): Promise<void> {
+  const generated = await directory.getDirectoryHandle(generated_folder, { create: true })
+  await write_text(generated, 'scripts.js', code)
+}
+
 export async function read_project(directory: FileSystemDirectoryHandle): Promise<ProjectManifest> {
   if (!(await file_exists(directory, manifest_file))) {
     throw new Error(`This folder is not a Seraphim project: ${manifest_file} is missing`)

@@ -118,13 +118,13 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
 
     async play() {
       const { document } = get()
-      if (!engine || !document || get().playing || starting) {
+      if (!engine || !project || !document || get().playing || starting) {
         return
       }
       starting = true
       try {
         push_to_engine()
-        scripts = await start_scripts(engine, document, useScriptStore.getState().root)
+        scripts = await start_scripts(engine, project, document, useScriptStore.getState().root)
         engine.Engine.start_simulation()
         set({ playing: true, error: undefined })
       } catch (error) {

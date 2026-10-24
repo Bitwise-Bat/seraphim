@@ -41,8 +41,8 @@ function is_build_failure(error: unknown): error is esbuild.BuildFailure {
 }
 
 /**
- * Bundles the given scripts into one CommonJS module whose default export maps each script's asset id to its default
- * export. Imports between scripts are bundled in; 'seraphim' stays a require() call, so the host decides what it is.
+ * Bundles the given scripts into one CommonJS module whose default export maps each script's asset id to its path
+ * inside scripts/ and its default export. Imports between scripts are bundled in; 'seraphim' stays a require() call, so the host decides what it is.
  * Throws an Error listing every compile error.
  */
 export async function compile_scripts(root: AssetFolder, scripts: AssetFile[]): Promise<string> {
@@ -52,7 +52,9 @@ export async function compile_scripts(root: AssetFolder, scripts: AssetFile[]): 
   const files = new Map([...files_in(root)].map((file) => [file.path, file]))
   const entry = [
     ...scripts.map((file, index) => `import script_${index} from ${JSON.stringify(`./${file.path}`)}`),
-    `export default {${scripts.map((file, index) => `${JSON.stringify(file.id)}: script_${index}`).join(', ')}}`,
+    `export default {${scripts
+      .map((file, index) => `${JSON.stringify(file.id)}: { path: ${JSON.stringify(file.path)}, script: script_${index} }`)
+      .join(', ')}}`,
   ].join('\n')
 
   const project_files: esbuild.Plugin = {
