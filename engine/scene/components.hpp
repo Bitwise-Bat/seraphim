@@ -133,6 +133,11 @@ struct audio_source
     std::optional<platform::voice> voice;
 };
 
+// Marks an entity whose state the server sends to every client.
+struct networked
+{
+};
+
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.
 struct scripts
 {

@@ -511,13 +511,15 @@ const component_titles: Record<ComponentName, string> = {
   animator: 'Animator',
   audio_source: 'Audio source',
   tilemap: 'Tilemap',
+  networked: 'Networked',
   scripts: 'Scripts',
 }
 
 type ComponentSectionProps = {
   name: ComponentName
   on_remove: () => void
-  children: ReactNode
+  // Components without settings, such as networked, show only their header.
+  children?: ReactNode
 }
 
 function ComponentSection({ name, on_remove, children }: ComponentSectionProps) {
@@ -536,7 +538,8 @@ function ComponentSection({ name, on_remove, children }: ComponentSectionProps) 
 
 function EntityInspector({ entity }: { entity: SceneEntity }) {
   const update_entity = useSceneStore((store) => store.update_entity)
-  const { transform, sprite, rigidbody, collider, animator, audio_source, tilemap, scripts } = entity.components
+  const { transform, sprite, rigidbody, collider, animator, audio_source, tilemap, networked, scripts } =
+    entity.components
   const missing = (Object.keys(component_titles) as ComponentName[]).filter((name) => !entity.components[name])
 
   function set_component<Name extends ComponentName>(name: Name, value: Components[Name]) {
@@ -593,6 +596,9 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
         <ComponentSection name="tilemap" on_remove={() => set_component('tilemap', undefined)}>
           <TilemapFields value={tilemap} on_change={(value) => set_component('tilemap', value)} />
         </ComponentSection>
+      )}
+      {networked && (
+        <ComponentSection name="networked" on_remove={() => set_component('networked', undefined)} />
       )}
       {scripts && (
         <ComponentSection name="scripts" on_remove={() => set_component('scripts', undefined)}>

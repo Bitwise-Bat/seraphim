@@ -80,6 +80,9 @@ export type Tilemap = {
   order: number
 }
 
+// Marks an entity whose state the server sends to every client.
+export type Networked = Record<string, never>
+
 // Asset ids of the scripts that drive the entity, run in list order.
 export type Scripts = {
   assets: string[]
@@ -93,6 +96,7 @@ export type Components = {
   animator?: Animator
   audio_source?: AudioSource
   tilemap?: Tilemap
+  networked?: Networked
   scripts?: Scripts
 }
 
@@ -128,5 +132,6 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
   animator: () => ({ animation_set: '', clip: '' }),
   audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false, spatial: false }),
   tilemap: () => ({ tileset: '', cell_size: [1, 1], size: [16, 16], layers: [empty_layer([16, 16])], order: 0 }),
+  networked: () => ({}),
   scripts: () => ({ assets: [] }),
 }

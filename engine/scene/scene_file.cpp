@@ -377,6 +377,12 @@ std::expected<void, std::string> read_entity(scene& scene, const json& value)
                 return std::unexpected(std::format("Entity '{}' has an invalid tilemap", id));
             registry.emplace<tilemap>(entity, std::move(*parsed));
         }
+        else if (key == "networked")
+        {
+            if (!component.is_object())
+                return std::unexpected(std::format("Entity '{}' has an invalid networked component", id));
+            registry.emplace<networked>(entity);
+        }
         else if (key == "scripts")
         {
             auto parsed = read_scripts(component);
@@ -479,6 +485,8 @@ std::string serialize_scene(const scene& scene)
                 {"order", map->order},
             };
         }
+        if (registry.all_of<networked>(entity))
+            components["networked"] = json::object();
         if (const auto* list = registry.try_get<scripts>(entity))
             components["scripts"] = {{"assets", list->assets}};
 
