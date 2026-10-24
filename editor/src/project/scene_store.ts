@@ -126,11 +126,13 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       starting = true
       try {
         push_to_engine()
-        scripts = await start_scripts(engine, project, document, useScriptStore.getState().root)
-        engine.Engine.start_simulation()
         connection = connect_to_server(engine)
+        scripts = await start_scripts(engine, connection, project, document, useScriptStore.getState().root)
+        engine.Engine.start_simulation()
         set({ playing: true, error: undefined })
       } catch (error) {
+        connection?.close()
+        connection = undefined
         set({ error: `Play failed: ${error_message(error)}` })
       } finally {
         starting = false

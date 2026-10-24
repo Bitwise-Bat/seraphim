@@ -5,6 +5,7 @@ import create_engine from '../../build/web-debug/seraphim_server.mjs'
 import { run_scripts, type ScriptedEntity } from '../../runtime/script_host.ts'
 import { create_world_api } from '../../runtime/world_api.ts'
 import { start_network } from './network.js'
+import { create_events } from './events.js'
 import { create_players } from './players.js'
 
 const port = 9001
@@ -38,7 +39,9 @@ if (existsSync(bundle_path)) {
 }
 const { entities } = JSON.parse(scene_text) as { entities: ScriptedEntity[] }
 const players = create_players()
-const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list }
+const events = create_events()
+const server = { on: events.on, off: events.off }
+const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server }
 run_scripts(engine.World, api, code, entities)
 
 engine.Server.start_simulation()
@@ -53,7 +56,10 @@ start_network(port, {
     players.remove(connection.id)
     console.log(`Player ${connection.id} left`)
   },
-  received: (connection, message) => players.receive(connection.id, message),
+  received: (connection, message) => {
+    players.receive(connection.id, message)
+    events.receive(connection.id, message)
+  },
 })
 
 function log_watched(tick: number): void {
@@ -77,6 +83,7 @@ setInterval(() => {
   last = now
   while (accumulator >= tick_ms) {
     accumulator -= tick_ms
+    events.dispatch(players.get)
     engine.Server.tick(tick_ms / 1000)
     tick += 1
     if (tick % tick_rate === 0) {

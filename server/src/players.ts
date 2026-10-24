@@ -6,6 +6,10 @@ export type Player = {
   readonly input: { is_down: (key: string) => boolean }
 }
 
+function player(id: number, keys: Set<string>): Player {
+  return { id, input: { is_down: (key) => keys.has(key) } }
+}
+
 export function create_players() {
   const held_keys = new Map<number, Set<string>>()
 
@@ -29,8 +33,13 @@ export function create_players() {
       }
     },
 
+    get(id: number): Player | undefined {
+      const keys = held_keys.get(id)
+      return keys ? player(id, keys) : undefined
+    },
+
     list(): Player[] {
-      return [...held_keys].map(([id, keys]) => ({ id, input: { is_down: (key) => keys.has(key) } }))
+      return [...held_keys].map(([id, keys]) => player(id, keys))
     },
   }
 }

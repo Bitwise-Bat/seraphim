@@ -1,4 +1,5 @@
 import type { MainModule } from 'seraphim/seraphim.js'
+import type { ServerConnection } from '../network/server_connection'
 import { run_scripts, type ScriptRun } from '../../../runtime/script_host.ts'
 import { find_file_by_id, type AssetFile, type AssetFolder } from '../project/assets'
 import { write_server_bundle } from '../project/project'
@@ -32,6 +33,7 @@ async function compile_side(root: AssetFolder, files: AssetFile[], sides: Script
 // bundle in the project, which the server runs; client scripts never reach that bundle, nor server scripts the editor.
 export async function start_scripts(
   engine: MainModule,
+  connection: ServerConnection,
   project: FileSystemDirectoryHandle,
   document: SceneDocument,
   root: AssetFolder | undefined,
@@ -40,5 +42,5 @@ export async function start_scripts(
   const sides = await Promise.all(files.map(async (file) => script_side(await (await file.handle.getFile()).text())))
   const client_code = await compile_side(root!, files, sides, 'server')
   await write_server_bundle(project, await compile_side(root!, files, sides, 'client'))
-  return run_scripts(engine.World, create_api(engine), client_code, document.entities)
+  return run_scripts(engine.World, create_api(engine, connection), client_code, document.entities)
 }

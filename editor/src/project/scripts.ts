@@ -133,6 +133,21 @@ export const script_types = {
 
   // Only works on the game server: the players connected right now, in the order they joined.
   export function players(): Player[]
+
+  export type EventHandler = (player: Player, data: unknown) => void
+
+  // Only works on the game server.
+  export const server: {
+    // The handler runs at the start of the tick after a client emits the event, before on_tick.
+    on(name: string, handler: EventHandler): void
+    off(name: string, handler: EventHandler): void
+  }
+
+  // Only works in the browser.
+  export const net: {
+    // Sends an event to the game server, where server.on handlers receive it. The data travels as JSON.
+    send(name: string, data?: unknown): void
+  }
 }
 `,
 }
