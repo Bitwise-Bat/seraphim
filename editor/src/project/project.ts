@@ -74,10 +74,10 @@ export async function write_script_setup(directory: FileSystemDirectoryHandle): 
   }
 }
 
-// Holds the scripts as the last Play compiled them, for the server to run.
-export async function write_scripts_bundle(directory: FileSystemDirectoryHandle, code: string): Promise<void> {
+// Holds the server's scripts as the last Play compiled them.
+export async function write_server_bundle(directory: FileSystemDirectoryHandle, code: string): Promise<void> {
   const generated = await directory.getDirectoryHandle(generated_folder, { create: true })
-  await write_text(generated, 'scripts.js', code)
+  await write_text(generated, 'server.js', code)
 }
 
 export async function read_project(directory: FileSystemDirectoryHandle): Promise<ProjectManifest> {

@@ -28,7 +28,7 @@ if (problem) {
 }
 
 // The editor writes the bundle on Play, so the server runs the scripts as the last Play compiled them.
-const bundle_path = join(project_path, '.seraphim', 'scripts.js')
+const bundle_path = join(project_path, '.seraphim', 'server.js')
 let code = ''
 if (existsSync(bundle_path)) {
   code = await readFile(bundle_path, 'utf8')

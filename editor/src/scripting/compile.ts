@@ -29,6 +29,14 @@ function resolve_relative(folder: string, specifier: string): string | undefined
   return parts.join('/')
 }
 
+export type ScriptSide = 'client' | 'server' | 'shared'
+
+// A script that starts with 'use client' or 'use server' runs on that side only; any other script runs on both.
+export function script_side(code: string): ScriptSide {
+  const directive = /^\s*(['"])use (client|server)\1/.exec(code)
+  return directive ? (directive[2] as ScriptSide) : 'shared'
+}
+
 function format_error(message: esbuild.Message): string {
   const location = message.location
   const file = location?.file.replace(`${scripts_namespace}:`, 'scripts/')

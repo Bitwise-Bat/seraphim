@@ -1,9 +1,9 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { run_scripts, type ScriptRun } from '../../../runtime/script_host.ts'
 import { find_file_by_id, type AssetFile, type AssetFolder } from '../project/assets'
-import { write_scripts_bundle } from '../project/project'
+import { write_server_bundle } from '../project/project'
 import type { SceneDocument } from '../project/scene_document'
-import { compile_scripts } from './compile'
+import { compile_scripts, script_side, type ScriptSide } from './compile'
 import { create_api } from './seraphim_api'
 
 export type { ScriptRun }
@@ -23,8 +23,13 @@ function used_scripts(document: SceneDocument, root: AssetFolder): AssetFile[] {
   return [...used.values()]
 }
 
-// Compiles the scene's scripts and runs them in the editor's engine. The bundle is also written into the project, so
-// the server runs the same scripts as the last Play.
+async function compile_side(root: AssetFolder, files: AssetFile[], sides: ScriptSide[], skipped: ScriptSide) {
+  const included = files.filter((_, index) => sides[index] !== skipped)
+  return included.length > 0 ? compile_scripts(root, included) : ''
+}
+
+// Runs the client and shared scripts in the editor's engine. The server and shared scripts are compiled into a second
+// bundle in the project, which the server runs; client scripts never reach that bundle, nor server scripts the editor.
 export async function start_scripts(
   engine: MainModule,
   project: FileSystemDirectoryHandle,
@@ -32,7 +37,8 @@ export async function start_scripts(
   root: AssetFolder | undefined,
 ): Promise<ScriptRun> {
   const files = root ? used_scripts(document, root) : []
-  const code = files.length > 0 ? await compile_scripts(root!, files) : ''
-  await write_scripts_bundle(project, code)
-  return run_scripts(engine.World, create_api(engine), code, document.entities)
+  const sides = await Promise.all(files.map(async (file) => script_side(await (await file.handle.getFile()).text())))
+  const client_code = await compile_side(root!, files, sides, 'server')
+  await write_server_bundle(project, await compile_side(root!, files, sides, 'client'))
+  return run_scripts(engine.World, create_api(engine), client_code, document.entities)
 }

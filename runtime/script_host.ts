@@ -67,8 +67,9 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
   for (const entity of entities) {
     for (const id of entity.components.scripts?.assets ?? []) {
       const compiled = bundle[id]
+      // Scripts of the other side are left out of this side's bundle.
       if (!compiled) {
-        throw new Error(`${entity.name} uses a script that is not in the compiled scripts (${id})`)
+        continue
       }
       const script_class = compiled.script
       if (typeof script_class !== 'function' || !(script_class.prototype instanceof api.Script)) {
