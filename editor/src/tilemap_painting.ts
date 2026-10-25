@@ -1,9 +1,21 @@
 import { useEffect, type RefObject } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
 import { useSceneStore } from './project/scene_store'
-import { cell_at, cells_between, flood_fill, paint_cells, type Cell } from './project/tilemap'
+import { cell_at, cells_between, flood_fill, paint_cells, paint_stamp, type Cell } from './project/tilemap'
 import { painted_entity, useTilemapToolStore } from './tilemap_tool_store'
 import { world_at } from './viewport_drag'
+
+function deduplicate(cells: Cell[]): Cell[] {
+  const seen = new Set<string>()
+  return cells.filter(([x, y]) => {
+    const key = `${x},${y}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
 
 // Paints the selected entity's tilemap with the chosen tool while the left button is held over the viewport.
 export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | null>, engine: MainModule | undefined) {
@@ -12,6 +24,7 @@ export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | nul
     if (!canvas || !engine) {
       return
     }
+    let origin: Cell | undefined
     let last: Cell | undefined
     let stroking = false
 
@@ -21,12 +34,25 @@ export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | nul
       return painted && world ? cell_at(painted.tilemap, painted.transform, world) : undefined
     }
 
+    // A brush stroke lays its stamps on a grid of the stamp's size that starts where the stroke began, so a large
+    // stamp is placed side by side instead of smeared over itself.
+    function snapped(cell: Cell): Cell {
+      const { tool, stamp } = useTilemapToolStore.getState()
+      if (tool !== 'brush' || !origin) {
+        return cell
+      }
+      return [
+        origin[0] + Math.floor((cell[0] - origin[0]) / stamp.width) * stamp.width,
+        origin[1] + Math.floor((cell[1] - origin[1]) / stamp.height) * stamp.height,
+      ]
+    }
+
     function apply(cells: Cell[]) {
       const painted = painted_entity()
       if (!painted) {
         return
       }
-      const { tool, tile, layer } = useTilemapToolStore.getState()
+      const { tool, stamp, layer } = useTilemapToolStore.getState()
       useSceneStore.getState().update_entity(painted.id, (entity) => {
         const { tilemap } = entity.components
         if (!tilemap) {
@@ -36,8 +62,10 @@ export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | nul
         const painted_layer = Math.min(layer, tilemap.layers.length - 1)
         const painted_map =
           tool === 'fill'
-            ? flood_fill(tilemap, painted_layer, cells[0], tile)
-            : paint_cells(tilemap, painted_layer, cells, tool === 'eraser' ? 0 : tile)
+            ? flood_fill(tilemap, painted_layer, cells[0], stamp)
+            : tool === 'eraser'
+              ? paint_cells(tilemap, painted_layer, cells, 0)
+              : paint_stamp(tilemap, painted_layer, cells, stamp)
         return { ...entity, components: { ...entity.components, tilemap: painted_map } }
       })
     }
@@ -48,7 +76,8 @@ export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | nul
       }
       stroking = useTilemapToolStore.getState().tool !== 'fill'
       canvas.setPointerCapture(event.pointerId)
-      last = cell_under(event)
+      origin = cell_under(event)
+      last = origin
       if (last) {
         apply([last])
       }
@@ -58,16 +87,23 @@ export function useTilemapPainting(canvas_ref: RefObject<HTMLCanvasElement | nul
       if (!stroking) {
         return
       }
-      const cell = cell_under(event)
-      if (!cell || (last && cell[0] === last[0] && cell[1] === last[1])) {
+      const under = cell_under(event)
+      if (!under) {
         return
       }
-      apply(last ? cells_between(last, cell) : [cell])
+      // A stroke that started outside the map begins its stamp grid where it first enters it.
+      origin ??= under
+      const cell = snapped(under)
+      if (last && cell[0] === last[0] && cell[1] === last[1]) {
+        return
+      }
+      apply(deduplicate(last ? cells_between(last, cell).map(snapped) : [cell]))
       last = cell
     }
 
     function end_stroke() {
       stroking = false
+      origin = undefined
       last = undefined
     }
 

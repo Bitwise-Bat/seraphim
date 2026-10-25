@@ -3,6 +3,9 @@ import type { Tilemap, TilemapLayer, Transform, Vec2 } from './scene_document'
 // Column and row, counted from the top-left cell.
 export type Cell = [number, number]
 
+// A rectangle of tile numbers, row by row, that the brush and fill paint with; 0 cells leave the map as it is.
+export type Stamp = { width: number; height: number; tiles: number[] }
+
 export function is_tileset_name(name: string): boolean {
   return name.endsWith('.tileset.json')
 }
@@ -79,21 +82,53 @@ export function paint_cells(map: Tilemap, layer: number, cells: Cell[], tile: nu
   })
 }
 
-// Replaces the connected area of cells that hold the same tile as the start cell, not crossing diagonals.
-export function flood_fill(map: Tilemap, layer: number, start: Cell, tile: number): Tilemap {
+// Puts the stamp's top-left tile on each origin; the parts that fall outside the map are dropped.
+export function paint_stamp(map: Tilemap, layer: number, origins: Cell[], stamp: Stamp): Tilemap {
+  return with_layer(map, layer, (grid) => {
+    for (const [origin_x, origin_y] of origins) {
+      for (let y = 0; y < stamp.height; ++y) {
+        for (let x = 0; x < stamp.width; ++x) {
+          const tile = stamp.tiles[y * stamp.width + x]
+          if (tile && grid[origin_y + y]?.[origin_x + x] !== undefined) {
+            grid[origin_y + y][origin_x + x] = tile
+          }
+        }
+      }
+    }
+  })
+}
+
+function wrap(value: number, size: number): number {
+  return ((value % size) + size) % size
+}
+
+// Repeats the stamp from the start cell over the connected area of cells that hold the same tile as the start cell,
+// not crossing diagonals.
+export function flood_fill(map: Tilemap, layer: number, start: Cell, stamp: Stamp): Tilemap {
   return with_layer(map, layer, (grid) => {
     const target = grid[start[1]]?.[start[0]]
-    if (target === undefined || target === tile) {
+    if (target === undefined) {
       return
     }
+    // The area is found before painting, since a stamp may put the target tile back into it.
+    const area: Cell[] = []
+    const seen = new Set<number>()
     const pending: Cell[] = [start]
     for (let cell = pending.pop(); cell; cell = pending.pop()) {
       const [x, y] = cell
-      if (grid[y]?.[x] !== target) {
+      const key = y * map.size[0] + x
+      if (grid[y]?.[x] !== target || seen.has(key)) {
         continue
       }
-      grid[y][x] = tile
+      seen.add(key)
+      area.push(cell)
       pending.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
+    }
+    for (const [x, y] of area) {
+      const tile = stamp.tiles[wrap(y - start[1], stamp.height) * stamp.width + wrap(x - start[0], stamp.width)]
+      if (tile) {
+        grid[y][x] = tile
+      }
     }
   })
 }

@@ -1,7 +1,7 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { find_file_by_id, type AssetFile } from './project/assets'
 import { useAssetStore } from './project/asset_store'
-import { is_tileset_name } from './project/tilemap'
+import { is_tileset_name, type Stamp } from './project/tilemap'
 import { useTilemapToolStore } from './tilemap_tool_store'
 
 // The part of the *.tileset.json format the palette needs; the engine validates the rest.
@@ -55,17 +55,33 @@ function is_tileset_file(value: unknown): value is TilesetFile {
   )
 }
 
+// Packs tiles into the smallest rectangle of the tileset that holds them; cells left out of the selection stay 0.
+function stamp_of(tiles: number[], columns: number): Stamp {
+  const cells = tiles.map((tile) => [(tile - 1) % columns, Math.floor((tile - 1) / columns)] as const)
+  const left = Math.min(...cells.map(([x]) => x))
+  const top = Math.min(...cells.map(([, y]) => y))
+  const width = Math.max(...cells.map(([x]) => x)) - left + 1
+  const height = Math.max(...cells.map(([, y]) => y)) - top + 1
+  const stamp_tiles = Array<number>(width * height).fill(0)
+  cells.forEach(([x, y], i) => {
+    stamp_tiles[(y - top) * width + (x - left)] = tiles[i]
+  })
+  return { width, height, tiles: stamp_tiles }
+}
+
 // Shows the tileset's image cut into its tiles; clicking a tile picks it for the brush.
 export function TilePalette({ tileset }: { tileset: string }) {
   const root = useAssetStore((store) => store.root)
   const tile = useTilemapToolStore((store) => store.tile)
   const tool = useTilemapToolStore((store) => store.tool)
   const palette_zoom = useTilemapToolStore((store) => store.palette_zoom)
-  const { set_tile, set_tool, set_palette_zoom } = useTilemapToolStore.getState()
+  const stamp = useTilemapToolStore((store) => store.stamp)
+  const { set_tile, set_tool, set_palette_zoom, set_stamp } = useTilemapToolStore.getState()
   const [result, set_result] = useState<LoadedTileset>()
   const [image, set_image] = useState<{ url: string; width: number; height: number }>()
+  const dragging_ref = useRef<{ origin: [number, number] } | null>(null)
   const tileset_file = root && tileset ? find_file_by_id(root, tileset) : undefined
-
+  
   useEffect(() => {
     if (!root || !tileset_file) {
       return
@@ -120,9 +136,9 @@ export function TilePalette({ tileset }: { tileset: string }) {
   const image_size = image?.url === url ? image : undefined
   const grid = image_size && grid_of(file, image_size.width, image_size.height)
 
-  function pick(event: MouseEvent<HTMLImageElement>) {
+  function cell_of(event: ReactPointerEvent<HTMLImageElement>): [number, number] | undefined {
     if (!grid || !image_size) {
-      return
+      return undefined
     }
     const rect = event.currentTarget.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * image_size.width) / rect.width - grid.margin
@@ -130,24 +146,107 @@ export function TilePalette({ tileset }: { tileset: string }) {
     const column = Math.floor(x / grid.stride_x)
     const row = Math.floor(y / grid.stride_y)
     if (column < 0 || row < 0 || column >= grid.columns || row >= grid.rows) {
+      return undefined
+    }
+    return [column, row]
+  }
+
+  function on_pointer_down(event: ReactPointerEvent<HTMLImageElement>) {
+    if (event.button !== 0 || !grid) {
       return
     }
-    set_tile(row * grid.columns + column + 1)
+    const cell = cell_of(event)
+    if (!cell) {
+      return
+    }
+    const [column, row] = cell
+    const picked = row * grid.columns + column + 1
+    const tile_count = grid.columns * grid.rows
+
+    if (event.shiftKey && tile >= 1 && tile <= tile_count) {
+      // Shift selects the rectangle between the last clicked tile and this one, which stays the anchor.
+      const anchor_column = (tile - 1) % grid.columns
+      const anchor_row = Math.floor((tile - 1) / grid.columns)
+      const [left, right] = [Math.min(anchor_column, column), Math.max(anchor_column, column)]
+      const [top, bottom] = [Math.min(anchor_row, row), Math.max(anchor_row, row)]
+      const tiles: number[] = []
+      for (let tile_row = top; tile_row <= bottom; ++tile_row) {
+        for (let tile_column = left; tile_column <= right; ++tile_column) {
+          tiles.push(tile_row * grid.columns + tile_column + 1)
+        }
+      }
+      set_stamp(stamp_of(tiles, grid.columns))
+    } else if (event.ctrlKey || event.metaKey) {
+      // Ctrl toggles single tiles; a stamp from another tileset may hold numbers this one does not have.
+      const selected = stamp.tiles.filter((selected_tile) => selected_tile > 0 && selected_tile <= tile_count)
+      const removing = selected.includes(picked)
+      const tiles = removing ? selected.filter((selected_tile) => selected_tile !== picked) : [...selected, picked]
+      if (tiles.length === 0) {
+        return
+      }
+      if (!removing) {
+        set_tile(picked)
+      }
+      set_stamp(stamp_of(tiles, grid.columns))
+    } else {
+      set_tile(picked)
+      set_stamp({ width: 1, height: 1, tiles: [picked] })
+      dragging_ref.current = { origin: [column, row] }
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }
+
     if (tool !== 'brush' && tool !== 'fill') {
       set_tool('brush')
     }
   }
 
-  const index = tile - 1
-  const selected =
-    grid && image_size && index < grid.columns * grid.rows
-      ? {
-          left: `${(grid.margin + (index % grid.columns) * grid.stride_x) * palette_zoom}px`,
-          top: `${(grid.margin + Math.floor(index / grid.columns) * grid.stride_y) * palette_zoom}px`,
-          width: `${file.tile_size[0] * palette_zoom}px`,
-          height: `${file.tile_size[1] * palette_zoom}px`,
-        }
-      : undefined
+  function on_pointer_move(event: ReactPointerEvent<HTMLImageElement>) {
+    if (!dragging_ref.current || !grid || !image_size) {
+      return
+    }
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * image_size.width) / rect.width - grid.margin
+    const y = ((event.clientY - rect.top) * image_size.height) / rect.height - grid.margin
+    const column = Math.max(0, Math.min(grid.columns - 1, Math.floor(x / grid.stride_x)))
+    const row = Math.max(0, Math.min(grid.rows - 1, Math.floor(y / grid.stride_y)))
+    const [origin_column, origin_row] = dragging_ref.current.origin
+    const [left, right] = [Math.min(origin_column, column), Math.max(origin_column, column)]
+    const [top, bottom] = [Math.min(origin_row, row), Math.max(origin_row, row)]
+    const tiles: number[] = []
+    for (let tile_row = top; tile_row <= bottom; ++tile_row) {
+      for (let tile_column = left; tile_column <= right; ++tile_column) {
+        tiles.push(tile_row * grid.columns + tile_column + 1)
+      }
+    }
+    set_stamp(stamp_of(tiles, grid.columns))
+  }
+
+  function on_pointer_up(event: ReactPointerEvent<HTMLImageElement>) {
+    if (dragging_ref.current) {
+      dragging_ref.current = null
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    }
+  }
+
+  const tile_count = grid ? grid.columns * grid.rows : 0
+  const selection = grid
+    ? stamp.tiles
+        .filter((selected_tile) => selected_tile > 0 && selected_tile <= tile_count)
+        .map((selected_tile) => {
+          const index = selected_tile - 1
+          return {
+            key: selected_tile,
+            style: {
+              left: `${(grid.margin + (index % grid.columns) * grid.stride_x) * palette_zoom}px`,
+              top: `${(grid.margin + Math.floor(index / grid.columns) * grid.stride_y) * palette_zoom}px`,
+              width: `${file.tile_size[0] * palette_zoom}px`,
+              height: `${file.tile_size[1] * palette_zoom}px`,
+            },
+          }
+        })
+    : []
 
   return (
     <>
@@ -159,13 +258,18 @@ export function TilePalette({ tileset }: { tileset: string }) {
           onLoad={(event) =>
             set_image({ url, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })
           }
-          onClick={pick}
+          onPointerDown={on_pointer_down}
+          onPointerMove={on_pointer_move}
+          onPointerUp={on_pointer_up}
+          onPointerCancel={on_pointer_up}
           style={{
             width: `${palette_zoom * (image?.width || 0)}px`,
             height: `${palette_zoom * (image?.height || 0)}px`,
           }}
         />
-        {selected && <div className="tile-palette-selection" style={selected} />}
+        {selection.map(({ key, style }) => (
+          <div key={key} className="tile-palette-selection" style={style} />
+        ))}
       </div>
       <div className="tile-palette-controls">
         <button
