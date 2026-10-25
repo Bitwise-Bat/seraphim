@@ -2,6 +2,7 @@
 
 #include "core/assert.hpp"
 #include "core/uuid.hpp"
+#include "scene/components.hpp"
 
 #include <emscripten/bind.h>
 #include <optional>
@@ -260,6 +261,31 @@ struct world_api
 
         return std::nullopt;
     }
+
+    static bool is_local(const std::string& id)
+    {
+        if (!g_world)
+            return false;
+
+        const auto& entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return false;
+
+        if (auto networked = g_world->scene.registry().try_get<seraphim::scene::networked>(entity))
+        {
+            return networked->owner_id == g_world->local_player_id;
+        }
+
+        return true;
+    }
+
+    static void set_local_id(std::uint32_t id)
+    {
+        if (!g_world)
+            return;
+
+        g_world->local_player_id = id;
+    }
 };
 
 } // namespace
@@ -290,5 +316,7 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_sprite", &world_api::set_sprite)
         .class_function("has_sprite", &world_api::has_sprite)
         .class_function("set_animation_set", &world_api::set_animation_set)
-        .class_function("get_animation_set", &world_api::get_animation_set);
+        .class_function("get_animation_set", &world_api::get_animation_set)
+        .class_function("is_local", &world_api::is_local)
+        .class_function("set_local_id", &world_api::set_local_id);
 }

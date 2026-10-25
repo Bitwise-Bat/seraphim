@@ -136,6 +136,7 @@ struct audio_source
 // Marks an entity whose state the server sends to every client.
 struct networked
 {
+    uint16_t owner_id{};
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.

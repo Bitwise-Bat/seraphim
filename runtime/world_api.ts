@@ -113,6 +113,10 @@ export function create_world_api(world: World, tick_seconds: number) {
       this.id = id
       this.name = name
     }
+    
+    is_local(): boolean {
+      return world.is_local(this.id)
+    }
 
     add_component(component: string) {
       world.add_component(this.id, component)

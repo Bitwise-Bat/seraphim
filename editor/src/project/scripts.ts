@@ -89,7 +89,8 @@ export const script_types = {
     get audio(): AudioSource | undefined
     get sprite(): Sprite | undefined
     
-    add_component(component_name: string) : void
+    is_local(): boolean
+    add_component(component_name: string): void
   }
 
   export abstract class Script {

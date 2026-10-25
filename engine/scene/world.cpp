@@ -165,7 +165,7 @@ std::string world::make_snapshot(glm::vec2 min, glm::vec2 max) const
 {
     auto entities = nlohmann::json::array();
     const auto view = scene.registry().view<const identity, const transform, const networked>();
-    for (const auto& [entity, id, tf] : view.each())
+    for (const auto& [entity, id, tf, net] : view.each())
     {
         const auto p = tf.position;
         if (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)

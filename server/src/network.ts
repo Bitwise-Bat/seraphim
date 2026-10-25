@@ -34,6 +34,11 @@ export function start_network(port: number, events: NetworkEvents): Network {
         connection.id = next_id++
         sockets.set(connection.id, socket)
         events.connected(connection)
+
+        sockets.get(connection.id)?.send(JSON.stringify({
+          type: "welcome",
+          player_id: connection.id
+        }));
       },
       message: (socket, data) => {
         // The data is only valid during this callback, so it is decoded right away.
@@ -59,7 +64,7 @@ export function start_network(port: number, events: NetworkEvents): Network {
       }
       console.log(`Listening on ws://localhost:${port}`)
     })
-
+  
   return {
     send: (id, text) => {
       sockets.get(id)?.send(text)

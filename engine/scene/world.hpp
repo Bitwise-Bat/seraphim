@@ -47,9 +47,8 @@ class world
     [[nodiscard]] bool has_animator(const std::string& id) const;
 
     [[nodiscard]] bool has_tilemap(const std::string& id) const;
-    [[nodiscard]] std::optional<std::vector<glm::uvec2>> find_path(const std::string& tilemap_id,
-                                                                  std::size_t blocking_layer, glm::uvec2 start,
-                                                                  glm::uvec2 end) const;
+    [[nodiscard]] std::optional<std::vector<glm::uvec2>>
+    find_path(const std::string& tilemap_id, std::size_t blocking_layer, glm::uvec2 start, glm::uvec2 end) const;
     [[nodiscard]] std::optional<glm::uvec2> get_cell_at_coord(const std::string& tilemap_id, glm::vec2 point) const;
     [[nodiscard]] std::optional<glm::vec2> get_cell_center(const std::string& tilemap_id, glm::uvec2 cell) const;
     [[nodiscard]] std::string make_snapshot(glm::vec2 min, glm::vec2 max) const;
@@ -59,6 +58,8 @@ class world
     std::optional<seraphim::scene::physics_system> physics;
     // The script host's function, called once per simulated tick; undefined or null when no scripts run.
     emscripten::val tick_handler = emscripten::val::undefined();
+
+    std::uint32_t local_player_id{};
 };
 
 inline world* g_world{};

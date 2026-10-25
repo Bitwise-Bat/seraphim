@@ -67,26 +67,27 @@ export function connect_to_server(engine: MainModule): ServerConnection {
   let frame = requestAnimationFrame(step)
 
   socket.addEventListener('message', (event) => {
-    let message: { type?: unknown; entities?: snapshot_entity[] }
+    let message: { type?: string; entities?: snapshot_entity[]; player_id?: number }
     try {
       message = JSON.parse(event.data)
     } catch {
       return
     }
-    if (message.type !== 'snapshot' || !message.entities) {
-      return
-    }
-    for (const entity of message.entities) {
-      const current = engine.World.get_transform(entity.id) as placement | null
-      interpolations.set(entity.id, {
-        // An entity seen for the first time has nowhere to slide from, so it appears in place.
-        from: current ? [current.x, current.y] : entity.position,
-        to: entity.position,
-        from_rotation: current ? current.rotation : entity.rotation,
-        to_rotation: entity.rotation,
-        scale: current ? [current.scale_x, current.scale_y] : [1, 1],
-        alpha: 0,
-      })
+    if (message.type === 'snapshot' && message.entities) {
+      for (const entity of message.entities) {
+        const current = engine.World.get_transform(entity.id) as placement | null
+        interpolations.set(entity.id, {
+          // An entity seen for the first time has nowhere to slide from, so it appears in place.
+          from: current ? [current.x, current.y] : entity.position,
+          to: entity.position,
+          from_rotation: current ? current.rotation : entity.rotation,
+          to_rotation: entity.rotation,
+          scale: current ? [current.scale_x, current.scale_y] : [1, 1],
+          alpha: 0,
+        })
+      }
+    } else if (message.type === 'welcome' && message.player_id) {
+      engine.World.set_local_id(message.player_id)
     }
   })
 
