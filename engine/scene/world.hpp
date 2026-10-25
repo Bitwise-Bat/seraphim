@@ -52,6 +52,7 @@ class world
                                                                   glm::uvec2 end) const;
     [[nodiscard]] std::optional<glm::uvec2> get_cell_at_coord(const std::string& tilemap_id, glm::vec2 point) const;
     [[nodiscard]] std::optional<glm::vec2> get_cell_center(const std::string& tilemap_id, glm::uvec2 cell) const;
+    [[nodiscard]] std::string make_snapshot(glm::vec2 min, glm::vec2 max) const;
 
     seraphim::scene::scene scene;
     // Exists only while the scene is simulated, so the editor can edit a scene without it moving.

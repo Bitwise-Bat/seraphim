@@ -147,6 +147,13 @@ struct world_api
         result.set("y", center->y);
         return result;
     }
+
+    static std::string make_snapshot(float min_x, float min_y, float max_x, float max_y)
+    {
+        if (!g_world)
+            return "";
+        return g_world->make_snapshot({min_x, min_y}, {max_x, max_y});
+    }
 };
 
 } // namespace
@@ -170,5 +177,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("has_tilemap", &world_api::has_tilemap)
         .class_function("find_path", &world_api::find_path)
         .class_function("get_cell_at_coord", &world_api::get_cell_at_coord)
-        .class_function("get_cell_center", &world_api::get_cell_center);
+        .class_function("get_cell_center", &world_api::get_cell_center)
+        .class_function("make_snapshot", &world_api::make_snapshot);
 }

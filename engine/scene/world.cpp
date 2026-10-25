@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <glm/common.hpp>
+#include <nlohmann/json.hpp>
 #include <utility>
 
 namespace seraphim::scene
@@ -158,6 +159,19 @@ std::optional<glm::vec2> world::get_cell_center(const std::string& tilemap_id, g
     const glm::vec2 local{(static_cast<float>(cell.x) + 0.5F) * size.x, -(static_cast<float>(cell.y) + 0.5F) * size.y};
     return placement->position +
            glm::vec2{(local.x * cosine) - (local.y * sine), (local.x * sine) + (local.y * cosine)};
+}
+
+std::string world::make_snapshot(glm::vec2 min, glm::vec2 max) const
+{
+    auto entities = nlohmann::json::array();
+    const auto view = scene.registry().view<const identity, const transform, const networked>();
+    for (const auto& [entity, id, tf] : view.each())
+    {
+        const auto p = tf.position;
+        if (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)
+            entities.push_back({{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}});
+    }
+    return nlohmann::json{{"type", "snapshot"}, {"entities", std::move(entities)}}.dump();
 }
 
 } // namespace seraphim::scene
