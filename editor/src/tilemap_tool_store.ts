@@ -10,18 +10,22 @@ type TilemapToolStore = {
   tile: number
   // Index of the layer that is painted.
   layer: number
+  palette_zoom: number
   set_tool: (tool: TilemapTool) => void
   set_tile: (tile: number) => void
   set_layer: (layer: number) => void
+  set_palette_zoom: (palette_zoom: number) => void
 }
 
 export const useTilemapToolStore = create<TilemapToolStore>()((set) => ({
   tool: 'select',
   tile: 1,
   layer: 0,
+  palette_zoom: 1,
   set_tool: (tool) => set({ tool }),
   set_tile: (tile) => set({ tile }),
   set_layer: (layer) => set({ layer }),
+  set_palette_zoom: (palette_zoom) => set({ palette_zoom }),
 }))
 
 // The entity the viewport paints on: set while a paint tool is chosen and the selected entity has a tilemap, so

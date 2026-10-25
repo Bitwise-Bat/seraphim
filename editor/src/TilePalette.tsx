@@ -60,7 +60,8 @@ export function TilePalette({ tileset }: { tileset: string }) {
   const root = useAssetStore((store) => store.root)
   const tile = useTilemapToolStore((store) => store.tile)
   const tool = useTilemapToolStore((store) => store.tool)
-  const { set_tile, set_tool } = useTilemapToolStore.getState()
+  const palette_zoom = useTilemapToolStore((store) => store.palette_zoom)
+  const { set_tile, set_tool, set_palette_zoom } = useTilemapToolStore.getState()
   const [result, set_result] = useState<LoadedTileset>()
   const [image, set_image] = useState<{ url: string; width: number; height: number }>()
   const tileset_file = root && tileset ? find_file_by_id(root, tileset) : undefined
@@ -141,25 +142,47 @@ export function TilePalette({ tileset }: { tileset: string }) {
   const selected =
     grid && image_size && index < grid.columns * grid.rows
       ? {
-          left: `${((grid.margin + (index % grid.columns) * grid.stride_x) / image_size.width) * 100}%`,
-          top: `${((grid.margin + Math.floor(index / grid.columns) * grid.stride_y) / image_size.height) * 100}%`,
-          width: `${(file.tile_size[0] / image_size.width) * 100}%`,
-          height: `${(file.tile_size[1] / image_size.height) * 100}%`,
+          left: `${(grid.margin + (index % grid.columns) * grid.stride_x) * palette_zoom}px`,
+          top: `${(grid.margin + Math.floor(index / grid.columns) * grid.stride_y) * palette_zoom}px`,
+          width: `${file.tile_size[0] * palette_zoom}px`,
+          height: `${file.tile_size[1] * palette_zoom}px`,
         }
       : undefined
 
   return (
-    <div className="tile-palette">
-      <img
-        src={url}
-        alt="Tileset"
-        draggable={false}
-        onLoad={(event) =>
-          set_image({ url, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })
-        }
-        onClick={pick}
-      />
-      {selected && <div className="tile-palette-selection" style={selected} />}
-    </div>
+    <>
+      <div className="tile-palette">
+        <img
+          src={url}
+          alt="Tileset"
+          draggable={false}
+          onLoad={(event) =>
+            set_image({ url, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })
+          }
+          onClick={pick}
+          style={{
+            width: `${palette_zoom * (image?.width || 0)}px`,
+            height: `${palette_zoom * (image?.height || 0)}px`,
+          }}
+        />
+        {selected && <div className="tile-palette-selection" style={selected} />}
+      </div>
+      <div className="tile-palette-controls">
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => set_palette_zoom(Math.min(16, palette_zoom * 2))}
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => set_palette_zoom(Math.max(0.25, palette_zoom / 2))}
+        >
+          -
+        </button>
+      </div>
+    </>
   )
 }

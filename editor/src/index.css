@@ -521,7 +521,9 @@ button:focus-visible,
 .tile-palette {
   position: relative;
   margin-top: 0.5rem;
+  max-height: 20rem;
   line-height: 0;
+  overflow: auto;
 }
 
 .tile-palette img {
@@ -536,6 +538,12 @@ button:focus-visible,
   box-sizing: border-box;
   border: 2px solid var(--accent);
   pointer-events: none;
+}
+
+.tile-palette-controls {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
 }
 
 .gizmo-handle {
