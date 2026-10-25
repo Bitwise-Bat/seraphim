@@ -38,6 +38,14 @@ export function create_world_api(world: World, tick_seconds: number) {
     set clip(clip: string) {
       world.set_clip(this.id, clip)
     }
+    
+    get set() : string | undefined {
+      return world.get_animation_set(this.id);
+    }
+    
+    set set(set: string) {
+      world.set_animation_set(this.id, set);
+    }
   }
 
   class Body {
@@ -54,6 +62,18 @@ export function create_world_api(world: World, tick_seconds: number) {
 
     set velocity([x, y]: Vec2) {
       world.set_velocity(this.id, x, y)
+    }
+  }
+
+  class Sprite {
+    private readonly id: string
+
+    constructor(id: string) {
+      this.id = id
+    }
+
+    set_sprite(sprite: string, order = 0) {
+      world.set_sprite(this.id, sprite, order)
     }
   }
 
@@ -87,10 +107,20 @@ export function create_world_api(world: World, tick_seconds: number) {
     #body: Body | undefined | null
     #animator: Animator | undefined | null
     #tilemap: Tilemap | undefined | null
+    #sprite: Sprite | undefined | null
 
     constructor(id: string, name: string) {
       this.id = id
       this.name = name
+    }
+
+    add_component(component: string) {
+      world.add_component(this.id, component)
+    }
+
+    get sprite(): Sprite | undefined {
+      this.#sprite ??= world.has_sprite(this.id) ? new Sprite(this.id) : null
+      return this.#sprite ?? undefined
     }
 
     get body(): Body | undefined {
@@ -155,8 +185,13 @@ export function create_world_api(world: World, tick_seconds: number) {
     const id = world.find_entity(name)
     return id ? new Entity(id, name) : undefined
   }
+  
+  function create_entity(name: string){
+    const id = world.create_entity(name)
+    return new Entity(id, name)
+  }
 
-  return { Entity, Script, log, time, find_entity }
+  return { Entity, Script, log, time, find_entity, create_entity }
 }
 
 export type WorldApi = ReturnType<typeof create_world_api>

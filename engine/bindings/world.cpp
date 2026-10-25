@@ -1,5 +1,8 @@
 #include "scene/world.hpp"
 
+#include "core/assert.hpp"
+#include "core/uuid.hpp"
+
 #include <emscripten/bind.h>
 #include <optional>
 #include <string>
@@ -154,6 +157,109 @@ struct world_api
             return "";
         return g_world->make_snapshot({min_x, min_y}, {max_x, max_y});
     }
+
+    static std::string create_entity(const std::string& name)
+    {
+        if (!g_world)
+            return "";
+
+        const auto uuid = seraphim::core::generate_uuid();
+        g_world->scene.create(uuid, name);
+
+        return uuid;
+    };
+
+    static void add_component(const std::string& id, const std::string& component)
+    {
+        if (!g_world)
+            return;
+
+        entt::entity entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+
+        auto& registry = g_world->scene.registry();
+
+        if (component == "transform")
+        {
+            registry.emplace<seraphim::scene::transform>(entity);
+        }
+        else if (component == "rigidbody")
+        {
+            registry.emplace<seraphim::scene::rigidbody>(entity);
+        }
+        else if (component == "sprite")
+        {
+            registry.emplace<seraphim::scene::sprite>(entity);
+        }
+        else if (component == "animator")
+        {
+            registry.emplace<seraphim::scene::animator>(entity);
+        }
+        else if (component == "networked")
+        {
+            registry.emplace<seraphim::scene::networked>(entity);
+        }
+    };
+
+    static void set_sprite(const std::string& id, const std::string& sprite, uint8_t order = 0)
+    {
+        if (!g_world)
+            return;
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+
+        auto* sprite_component = g_world->scene.registry().try_get<seraphim::scene::sprite>(entity);
+        if (!sprite_component)
+            return;
+
+        sprite_component->texture = sprite;
+        sprite_component->handle = {};
+        sprite_component->order = order;
+    }
+
+    static bool has_sprite(const std::string& id)
+    {
+        if (!g_world)
+            return false;
+
+        const auto entity = g_world->scene.find(id);
+        return entity != entt::null && g_world->scene.registry().all_of<seraphim::scene::sprite>(entity);
+    };
+
+    static void set_animation_set(const std::string& id, const std::string& animation_set)
+    {
+        if (!g_world)
+            return;
+
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+
+        if (auto* animator = g_world->scene.registry().try_get<seraphim::scene::animator>(entity))
+        {
+            if (animator->animation_set != animation_set)
+            {
+                animator->animation_set = animation_set;
+                animator->handle = {};
+            }
+        }
+    }
+
+    static std::optional<std::string> get_animation_set(const std::string& id)
+    {
+        if (!g_world)
+            return std::nullopt;
+
+        const auto& entity = g_world->scene.find(id);
+        if (auto animator = g_world->scene.registry().try_get<seraphim::scene::animator>(entity))
+        {
+            return animator->animation_set;
+        }
+
+        return std::nullopt;
+    }
 };
 
 } // namespace
@@ -178,5 +284,11 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("find_path", &world_api::find_path)
         .class_function("get_cell_at_coord", &world_api::get_cell_at_coord)
         .class_function("get_cell_center", &world_api::get_cell_center)
-        .class_function("make_snapshot", &world_api::make_snapshot);
+        .class_function("make_snapshot", &world_api::make_snapshot)
+        .class_function("create_entity", &world_api::create_entity)
+        .class_function("add_component", &world_api::add_component)
+        .class_function("set_sprite", &world_api::set_sprite)
+        .class_function("has_sprite", &world_api::has_sprite)
+        .class_function("set_animation_set", &world_api::set_animation_set)
+        .class_function("get_animation_set", &world_api::get_animation_set);
 }

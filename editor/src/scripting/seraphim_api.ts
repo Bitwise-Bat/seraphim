@@ -83,5 +83,10 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     return id ? new Entity(id, name) : undefined
   }
 
-  return { ...shared, Entity, find_entity, camera, input, net }
+  function create_entity(name: string): Entity {
+    const id = engine.World.create_entity(name)
+    return new Entity(id, name)
+  }
+
+  return { ...shared, Entity, find_entity, create_entity, camera, input, net }
 }

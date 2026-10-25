@@ -15,10 +15,13 @@ void animation_system::resolve(entt::registry& registry, asset::asset_manager& a
             state.handle = assets.load_animation_set(state.animation_set);
 }
 
-void animation_system::update(entt::registry& registry, const asset::asset_manager& assets, float dt)
+void animation_system::update(entt::registry& registry, asset::asset_manager& assets, float dt)
 {
     for (const auto [entity, state, image] : registry.view<animator, sprite>().each())
     {
+        if (!state.handle.valid() && !state.animation_set.empty())
+            state.handle = assets.load_animation_set(state.animation_set);
+
         const asset::animation_set* set = assets.get_animation_set(state.handle);
         const asset::animation_clip* clip = set ? set->find(state.clip) : nullptr;
         if (!clip || clip->frames.empty() || clip->frame_duration <= 0.0F)

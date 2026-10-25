@@ -40,6 +40,7 @@ export const script_types = {
     private readonly id: string
     // Name of the playing clip. Assigning another one starts it from its first frame.
     clip: string
+    set: string
   }
 
   export class AudioSource {
@@ -62,6 +63,12 @@ export const script_types = {
     // World position of the centre of a cell; undefined outside the map.
     get_cell_center(cell: Vec2): Vec2 | undefined
   }
+  
+  class Sprite {
+    private readonly id: string
+    
+    set_sprite(sprite: string, order?: number) : void;
+  }
 
   export class Entity {
     readonly id: string
@@ -70,6 +77,7 @@ export const script_types = {
     #animator: Animator | undefined | null
     #tilemap: Tilemap | undefined | null
     #audio: AudioSource | undefined | null
+    #sprite: Sprite | undefined | null
     // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
     position: Vec2
     // Counter-clockwise, in radians.
@@ -79,6 +87,9 @@ export const script_types = {
     get animator(): Animator | undefined
     get tilemap(): Tilemap | undefined
     get audio(): AudioSource | undefined
+    get sprite(): Sprite | undefined
+    
+    add_component(component_name: string) : void
   }
 
   export abstract class Script {
@@ -123,6 +134,7 @@ export const script_types = {
 
   // Returns the first entity with the name.
   export function find_entity(name: string): Entity | undefined
+  export function create_entity(name: string): Entity
 
   export type Player = {
     // Stays the same while the player is connected.
