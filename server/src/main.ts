@@ -11,6 +11,8 @@ import { create_players } from './players.js'
 const port = 9001
 const tick_rate = 60
 const tick_ms = 1000 / tick_rate
+// Snapshots go out every third tick (20 Hz); the client interpolates between them.
+const snapshot_ticks = 3
 // Matches core::fixed_timestep: after a stall the server skips time instead of running a burst of catch-up ticks.
 const max_frame_ms = 250
 
@@ -47,7 +49,7 @@ run_scripts(engine.World, api, code, entities)
 engine.Server.start_simulation()
 console.log(`Simulating ${scene_path} at ${tick_rate} Hz`)
 
-start_network(port, {
+const network = start_network(port, {
   connected: (connection) => {
     players.add(connection.id)
     console.log(`Player ${connection.id} joined`)
@@ -86,6 +88,10 @@ setInterval(() => {
     events.dispatch(players.get)
     engine.Server.tick(tick_ms / 1000)
     tick += 1
+    if (tick % snapshot_ticks === 0) {
+      const snapshot = engine.World.make_snapshot(-1e4, -1e4, 1e4, 1e4)
+      for (const player of players.list()) network.send(player.id, snapshot)
+    }
     if (tick % tick_rate === 0) {
       log_watched(tick)
     }
