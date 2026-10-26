@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -133,10 +134,12 @@ struct audio_source
     std::optional<platform::voice> voice;
 };
 
+inline constexpr std::uint32_t invalid_player_id = std::numeric_limits<std::uint32_t>::max();
+
 // Marks an entity whose state the server sends to every client.
 struct networked
 {
-    uint16_t owner_id{};
+    std::uint32_t owner_id = invalid_player_id;
 };
 
 // Asset ids of the scripts that drive the entity, run in list order while the scene is simulated.

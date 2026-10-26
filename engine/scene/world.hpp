@@ -59,7 +59,7 @@ class world
     // The script host's function, called once per simulated tick; undefined or null when no scripts run.
     emscripten::val tick_handler = emscripten::val::undefined();
 
-    std::uint32_t local_player_id{};
+    std::uint32_t local_player_id = invalid_player_id;
 };
 
 inline world* g_world{};

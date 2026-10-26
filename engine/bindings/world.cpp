@@ -273,6 +273,9 @@ struct world_api
 
         if (auto networked = g_world->scene.registry().try_get<seraphim::scene::networked>(entity))
         {
+            if (networked->owner_id == seraphim::scene::invalid_player_id ||
+                g_world->local_player_id == seraphim::scene::invalid_player_id)
+                return false;
             return networked->owner_id == g_world->local_player_id;
         }
 
