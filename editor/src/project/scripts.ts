@@ -173,6 +173,8 @@ export const script_types = {
   export const net: {
     // Sends an event to the game server, where server.on handlers receive it. The data travels as JSON.
     send(name: string, data?: unknown): void
+    on(name: string, cb: (data: unknown) => void): void
+    off(name: string, cb: (data: unknown) => void): void
   }
 }
 `,

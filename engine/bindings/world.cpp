@@ -186,7 +186,7 @@ struct world_api
         if (!g_world)
             return;
 
-        entt::entity entity = g_world->scene.find(id);
+        const entt::entity entity = g_world->scene.find(id);
         if (entity == entt::null)
             return;
 
@@ -199,6 +199,8 @@ struct world_api
         else if (component == "rigidbody")
         {
             static_cast<void>(registry.get_or_emplace<seraphim::scene::rigidbody>(entity));
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::collider>(entity));
+            g_world->physics->create_body(entity, g_world->scene);
         }
         else if (component == "sprite")
         {

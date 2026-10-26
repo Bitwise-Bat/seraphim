@@ -76,6 +76,8 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
 
   const net = {
     send: (name: string, data?: unknown): void => connection.send({ type: 'event', name, data }),
+    on: (type: string,  cb: (data: unknown) => void): void => connection.on(type, cb),
+    off: (type: string,  cb: (data: unknown) => void): void => connection.off(type, cb)
   }
 
   function find_entity(name: string): Entity | undefined {

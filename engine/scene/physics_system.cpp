@@ -1,5 +1,6 @@
 #include "scene/physics_system.hpp"
 
+#include "core/log.hpp"
 #include "scene/components.hpp"
 #include "scene/scene.hpp"
 
@@ -153,5 +154,37 @@ bool physics_system::has_body(entt::entity id) const
         return false;
 
     return b2Body_IsValid(body->second);
+}
+
+b2BodyId physics_system::create_body(entt::entity entity, scene& scene)
+{
+    if (m_bodies.contains(entity))
+        return b2_nullBodyId;
+
+    auto& registry = scene.registry();
+    const auto* placement = registry.try_get<transform>(entity);
+    const transform pose = placement ? *placement : transform{};
+    const auto* body = registry.try_get<rigidbody>(entity);
+    const auto* shape = registry.try_get<collider>(entity);
+
+    b2BodyDef body_def = b2DefaultBodyDef();
+    body_def.type = body ? to_b2(body->type) : b2_staticBody;
+    body_def.position = to_b2(pose.position);
+    body_def.rotation = b2MakeRot(pose.rotation);
+    body_def.userData = to_user_data(entity);
+    if (body)
+    {
+        body_def.gravityScale = body->gravity_scale;
+        body_def.fixedRotation = body->fixed_rotation;
+    }
+
+    const b2BodyId id = b2CreateBody(m_world, &body_def);
+    m_bodies.emplace(entity, id);
+    if (shape)
+    {
+        create_shape(id, *shape, pose.scale);
+    }
+
+    return id;
 }
 } // namespace seraphim::scene

@@ -32,6 +32,9 @@ class physics_system
 
     [[nodiscard]] bool has_body(entt::entity id) const;
 
+    b2BodyId create_body(entt::entity entity, scene& scene);
+    void set_fixed_rotation(entt::entity entity, bool enabled);
+
   private:
     b2WorldId m_world;
     std::unordered_map<entt::entity, b2BodyId> m_bodies;
