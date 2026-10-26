@@ -118,6 +118,16 @@ export function create_world_api(world: World, tick_seconds: number) {
       return world.is_local(this.id)
     }
 
+    get owner_id(): number {
+      const fn = (world as unknown as { get_owner_id?: (id: string) => number }).get_owner_id
+      return fn ? fn(this.id) : 0
+    }
+
+    set_owner_id(owner_id: number): void {
+      const fn = (world as unknown as { set_owner_id?: (id: string, owner_id: number) => void }).set_owner_id
+      fn?.(this.id, owner_id)
+    }
+
     add_component(component: string): void {
       world.add_component(this.id, component)
     }

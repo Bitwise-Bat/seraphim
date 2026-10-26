@@ -16,6 +16,13 @@ const snapshot_ticks = 3
 // Matches core::fixed_timestep: after a stall the server skips time instead of running a burst of catch-up ticks.
 const max_frame_ms = 250
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason)
+})
+
 const [project_path, watched_name] = process.argv.slice(2)
 if (!project_path) {
   console.error('Usage: npm start -- <project folder> [entity name to log]')
@@ -42,19 +49,107 @@ if (existsSync(bundle_path)) {
 const { entities } = JSON.parse(scene_text) as { entities: ScriptedEntity[] }
 const players = create_players()
 const events = create_events()
-const server = { on: events.on, off: events.off }
+
+type SpawnOptions = {
+  name: string
+  owner_id?: number
+  position?: [number, number]
+  sprite?: string
+  order?: number
+  animation_set?: string
+}
+
+type NetworkHandle = ReturnType<typeof start_network>
+let network: NetworkHandle | undefined
+const spawned_entities = new Map<string, SpawnOptions & { id: string }>()
+
+function broadcast(message: unknown): void {
+  if (!network) return
+  const text = JSON.stringify(message)
+  for (const player of players.list()) {
+    network.send(player.id, text)
+  }
+}
+
+function send_to(player_id: number, message: unknown): void {
+  network?.send(player_id, JSON.stringify(message))
+}
+
+const server = {
+  on: events.on,
+  off: events.off,
+  send(player_id: number, name: string, data: unknown): void {
+    send_to(player_id, { type: 'event', name, data })
+  },
+  broadcast(name: string, data: unknown): void {
+    broadcast({ type: 'event', name, data })
+  },
+  spawn(options: SpawnOptions): string {
+    const id = engine.World.create_entity(options.name)
+    engine.World.add_component(id, 'transform')
+    engine.World.add_component(id, 'networked')
+    const set_owner = (engine.World as unknown as { set_owner_id?: (id: string, owner: number) => void }).set_owner_id
+    if (options.owner_id !== undefined && set_owner) {
+      set_owner(id, options.owner_id)
+    }
+    if (options.position) {
+      engine.World.set_transform(id, options.position[0], options.position[1], 0, 1, 1)
+    }
+    if (options.sprite) {
+      engine.World.add_component(id, 'sprite')
+      engine.World.set_sprite(id, options.sprite, options.order ?? 10)
+    }
+    if (options.animation_set) {
+      engine.World.add_component(id, 'animator')
+      engine.World.set_animation_set(id, options.animation_set)
+    }
+
+    const entity_data = {
+      id,
+      name: options.name,
+      owner_id: options.owner_id,
+      position: options.position ?? [0, 0],
+      sprite: options.sprite,
+      order: options.order ?? 10,
+      animation_set: options.animation_set,
+    }
+    spawned_entities.set(id, entity_data)
+    broadcast({ type: 'spawn_entity', entity: entity_data })
+
+    return id
+  },
+  despawn(id: string): void {
+    spawned_entities.delete(id)
+    broadcast({ type: 'despawn_entity', id })
+  },
+}
+
 const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server }
 run_scripts(engine.World, api, code, entities)
 
 engine.Server.start_simulation()
 console.log(`Simulating ${scene_path} at ${tick_rate} Hz`)
 
-const network = start_network(port, {
+network = start_network(port, {
   connected: (connection) => {
     players.add(connection.id)
     console.log(`Player ${connection.id} joined`)
+
+    for (const entity of spawned_entities.values()) {
+      send_to(connection.id, { type: 'spawn_entity', entity })
+    }
+
+    const player = players.get(connection.id)
+    if (player) {
+      events.emit('connected', player, {})
+      events.emit('player_join', player, {})
+    }
   },
   disconnected: (connection) => {
+    const player = players.get(connection.id)
+    if (player) {
+      events.emit('player_leave', player, {})
+    }
     players.remove(connection.id)
     console.log(`Player ${connection.id} left`)
   },
@@ -90,7 +185,7 @@ setInterval(() => {
     tick += 1
     if (tick % snapshot_ticks === 0) {
       const snapshot = engine.World.make_snapshot(-1e4, -1e4, 1e4, 1e4)
-      for (const player of players.list()) network.send(player.id, snapshot)
+      for (const player of players.list()) network?.send(player.id, snapshot)
     }
     if (tick % tick_rate === 0) {
       log_watched(tick)

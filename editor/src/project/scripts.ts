@@ -149,11 +149,24 @@ export const script_types = {
 
   export type EventHandler = (player: Player, data: unknown) => void
 
+  export type SpawnOptions = {
+    name: string
+    owner_id?: number
+    position?: [number, number]
+    sprite?: string
+    order?: number
+    animation_set?: string
+  }
+
   // Only works on the game server.
   export const server: {
     // The handler runs at the start of the tick after a client emits the event, before on_tick.
     on(name: string, handler: EventHandler): void
     off(name: string, handler: EventHandler): void
+    spawn(options: SpawnOptions): string
+    despawn(id: string): void
+    send(player_id: number, name: string, data?: unknown): void
+    broadcast(name: string, data?: unknown): void
   }
 
   // Only works in the browser.

@@ -168,7 +168,18 @@ struct world_api
         g_world->scene.create(uuid, name);
 
         return uuid;
-    };
+    }
+
+    static std::string create_entity_with_id(const std::string& name, const std::string& id)
+    {
+        if (!g_world)
+            return "";
+
+        const auto uuid = id.empty() ? seraphim::core::generate_uuid() : id;
+        g_world->scene.create(uuid, name);
+
+        return uuid;
+    }
 
     static void add_component(const std::string& id, const std::string& component)
     {
@@ -183,23 +194,23 @@ struct world_api
 
         if (component == "transform")
         {
-            registry.emplace<seraphim::scene::transform>(entity);
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::transform>(entity));
         }
         else if (component == "rigidbody")
         {
-            registry.emplace<seraphim::scene::rigidbody>(entity);
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::rigidbody>(entity));
         }
         else if (component == "sprite")
         {
-            registry.emplace<seraphim::scene::sprite>(entity);
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::sprite>(entity));
         }
         else if (component == "animator")
         {
-            registry.emplace<seraphim::scene::animator>(entity);
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::animator>(entity));
         }
         else if (component == "networked")
         {
-            registry.emplace<seraphim::scene::networked>(entity);
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::networked>(entity));
         }
     };
 
@@ -289,6 +300,34 @@ struct world_api
 
         g_world->local_player_id = id;
     }
+
+    static void set_owner_id(const std::string& id, std::uint32_t owner_id)
+    {
+        if (!g_world)
+            return;
+
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+
+        auto& networked = g_world->scene.registry().get_or_emplace<seraphim::scene::networked>(entity);
+        networked.owner_id = owner_id;
+    }
+
+    static std::uint32_t get_owner_id(const std::string& id)
+    {
+        if (!g_world)
+            return seraphim::scene::invalid_player_id;
+
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return seraphim::scene::invalid_player_id;
+
+        if (const auto* networked = g_world->scene.registry().try_get<seraphim::scene::networked>(entity))
+            return networked->owner_id;
+
+        return seraphim::scene::invalid_player_id;
+    }
 };
 
 } // namespace
@@ -321,5 +360,8 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_animation_set", &world_api::set_animation_set)
         .class_function("get_animation_set", &world_api::get_animation_set)
         .class_function("is_local", &world_api::is_local)
-        .class_function("set_local_id", &world_api::set_local_id);
+        .class_function("set_local_id", &world_api::set_local_id)
+        .class_function("create_entity_with_id", &world_api::create_entity_with_id)
+        .class_function("set_owner_id", &world_api::set_owner_id)
+        .class_function("get_owner_id", &world_api::get_owner_id);
 }

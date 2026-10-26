@@ -1,3 +1,4 @@
+#include "core/uuid.hpp"
 #include "scene/scene_file.hpp"
 #include "scene/world.hpp"
 
@@ -43,6 +44,19 @@ struct server_api
         if (g_server_world)
             g_server_world->tick(seconds);
     }
+
+    static std::optional<std::string> create_entity(const std::string& name)
+    {
+        if (!g_server_world)
+            return std::nullopt;
+
+        const auto& uuid = seraphim::core::generate_uuid();
+        const auto entity = g_server_world->scene.create(uuid, name.empty() ? uuid : name);
+        if (entity == entt::null)
+            return std::nullopt;
+
+        return uuid;
+    }
 };
 
 } // namespace
@@ -53,5 +67,6 @@ EMSCRIPTEN_BINDINGS(server)
         .class_function("load_scene", &server_api::load_scene)
         .class_function("start_simulation", &server_api::start_simulation)
         .class_function("stop_simulation", &server_api::stop_simulation)
-        .class_function("tick", &server_api::tick);
+        .class_function("tick", &server_api::tick)
+        .class_function("create_entity", &server_api::create_entity);
 }

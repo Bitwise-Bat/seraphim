@@ -19,6 +19,10 @@ export function create_events() {
       handlers.set(name, (handlers.get(name) ?? []).filter((registered) => registered !== handler))
     },
 
+    emit(name: string, player: Player, data: unknown): void {
+      queue.push({ player_id: player.id, name, data })
+    },
+
     // Clients are not trusted, so anything but a well-formed event message is ignored.
     receive(player_id: number, message: unknown): void {
       const { type, name, data } = message as { type?: unknown; name?: unknown; data?: unknown }
