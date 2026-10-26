@@ -16,4 +16,5 @@ add_custom_command(TARGET seraphim_server POST_BUILD
         ${CMAKE_BINARY_DIR}/seraphim-launcher.bat
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/register.bat
-        ${CMAKE_BINARY_DIR}/register.bat)
+        ${CMAKE_BINARY_DIR}/register.bat
+)

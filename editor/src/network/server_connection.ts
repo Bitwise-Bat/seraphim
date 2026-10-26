@@ -1,7 +1,7 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { key_codes, type KeyName } from '../scripting/keys'
 
-const server_url = 'ws://localhost:9001'
+export const server_url = 'ws://localhost:9001'
 const send_interval_ms = 1000 / 60
 // Matches the server, which sends a snapshot every third 60 Hz tick.
 const snapshot_interval = 3 / 60
