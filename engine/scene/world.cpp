@@ -1,5 +1,6 @@
 #include "scene/world.hpp"
 
+#include "core/log.hpp"
 #include "scene/navigator_grid.hpp"
 
 #include <cmath>
@@ -93,6 +94,7 @@ std::optional<std::string> world::get_clip(const std::string& id) const
 void world::set_clip(const std::string& id, const std::string& clip)
 {
     auto* player = scene.registry().try_get<animator>(scene.find(id));
+    seraphim::log::info("PLAYER {} CLIP: {}", player != nullptr, clip);
     // Setting the playing clip again, as scripts do every tick, must not restart it.
     if (!player || player->clip == clip)
         return;
@@ -164,12 +166,13 @@ std::optional<glm::vec2> world::get_cell_center(const std::string& tilemap_id, g
 std::string world::make_snapshot(glm::vec2 min, glm::vec2 max) const
 {
     auto entities = nlohmann::json::array();
-    const auto view = scene.registry().view<const identity, const transform, const networked>();
-    for (const auto& [entity, id, tf, net] : view.each())
+    const auto view = scene.registry().view<const identity, const transform, const networked, const animator>();
+    for (const auto& [entity, id, tf, net, anim] : view.each())
     {
         const auto p = tf.position;
         if (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)
-            entities.push_back({{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}});
+            entities.push_back(
+                {{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}, {"clip", anim.clip}});
     }
     return nlohmann::json{{"type", "snapshot"}, {"entities", std::move(entities)}}.dump();
 }

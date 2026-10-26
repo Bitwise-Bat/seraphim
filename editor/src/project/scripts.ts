@@ -168,6 +168,7 @@ export const script_types = {
     despawn(id: string): void
     send(player_id: number, name: string, data?: unknown): void
     broadcast(name: string, data?: unknown): void
+    set_clip(id: string, clip: string): void
   }
 
   // Only works in the browser.

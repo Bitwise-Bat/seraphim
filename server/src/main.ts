@@ -122,6 +122,10 @@ const server = {
     spawned_entities.delete(id)
     broadcast({ type: 'despawn_entity', id })
   },
+  set_clip(id: string,  clip: string): void {
+    engine.World.set_clip(id,  clip);
+    broadcast({ type: 'anim_clip_changed', clip, id})
+  }
 }
 
 const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server }

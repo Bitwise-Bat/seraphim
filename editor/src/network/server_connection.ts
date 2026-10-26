@@ -16,7 +16,7 @@ type spawned_entity_payload = {
   animation_set?: string
 }
 
-type snapshot_entity = { id: string; position: [number, number]; rotation: number }
+type snapshot_entity = { id: string; position: [number, number]; rotation: number; clip: string }
 
 type placement = { x: number; y: number; rotation: number; scale_x: number; scale_y: number }
 
@@ -86,13 +86,14 @@ export function connect_to_server(engine: MainModule): ServerConnection {
       entity?: spawned_entity_payload
       id?: string
       player_id?: number
+      clip?: string
     }
     try {
       message = JSON.parse(event.data)
     } catch {
       return
     }
-
+    
     if (message.type === 'spawn_entity' && message.entity) {
       const e = message.entity
       const existing = engine.World.find_entity(e.name)
@@ -134,6 +135,9 @@ export function connect_to_server(engine: MainModule): ServerConnection {
             current = engine.World.get_transform(entity.id) as placement | null
           }
         }
+        if (entity.clip){
+          engine.World.set_clip(entity.id, entity.clip)
+        }
         interpolations.set(entity.id, {
           // An entity seen for the first time has nowhere to slide from, so it appears in place.
           from: current ? [current.x, current.y] : entity.position,
@@ -146,6 +150,9 @@ export function connect_to_server(engine: MainModule): ServerConnection {
       }
     } else if (message.type === 'welcome' && message.player_id) {
       engine.World.set_local_id(message.player_id)
+    }
+    else if (message.type === "anim_clip_changed" && message.clip && message.id) {
+      engine.World.set_clip(message.id, message.clip);
     } else if (message.type === 'event' && typeof (message as { name?: unknown }).name === 'string') {
       const event_msg = message as { name: string; data?: unknown }
       const handlers = event_handlers.get(event_msg.name)
