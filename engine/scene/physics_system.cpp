@@ -187,4 +187,21 @@ b2BodyId physics_system::create_body(entt::entity entity, scene& scene)
 
     return id;
 }
+
+void physics_system::set_fixed_rotation(entt::entity entity, bool enabled)
+{
+    const auto body = m_bodies.find(entity);
+    if (body == m_bodies.end())
+        return;
+
+    b2Body_SetFixedRotation(body->second, enabled);
+}
+
+bool physics_system::get_fixed_rotation(entt::entity entity)
+{
+    const auto body = m_bodies.find(entity);
+    if (body == m_bodies.end())
+        return false;
+    return b2Body_IsFixedRotation(body->second);
+}
 } // namespace seraphim::scene

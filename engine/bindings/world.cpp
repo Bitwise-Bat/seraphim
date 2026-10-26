@@ -330,6 +330,26 @@ struct world_api
 
         return seraphim::scene::invalid_player_id;
     }
+
+    static void set_fixed_rotation(const std::string& id, bool enabled)
+    {
+        if (!g_world)
+            return;
+        const entt::entity entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+        g_world->physics->set_fixed_rotation(entity, enabled);
+    }
+
+    static bool get_fixed_rotation(const std::string& id)
+    {
+        if (!g_world)
+            return false;
+        const entt::entity entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return false;
+        return g_world->physics->get_fixed_rotation(entity);
+    }
 };
 
 } // namespace
@@ -365,5 +385,7 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_local_id", &world_api::set_local_id)
         .class_function("create_entity_with_id", &world_api::create_entity_with_id)
         .class_function("set_owner_id", &world_api::set_owner_id)
-        .class_function("get_owner_id", &world_api::get_owner_id);
+        .class_function("get_owner_id", &world_api::get_owner_id)
+        .class_function("set_fixed_rotation", &world_api::set_fixed_rotation)
+        .class_function("get_fixed_rotation", &world_api::get_fixed_rotation);
 }

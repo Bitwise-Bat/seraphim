@@ -63,6 +63,14 @@ export function create_world_api(world: World, tick_seconds: number) {
     set velocity([x, y]: Vec2) {
       world.set_velocity(this.id, x, y)
     }
+    
+    get fixed_rotation() {
+      return world.get_fixed_rotation(this.id)
+    }
+    
+    set fixed_rotation(enabled: boolean) {
+      world.set_fixed_rotation(this.id, enabled)
+    }
   }
 
   class Sprite {

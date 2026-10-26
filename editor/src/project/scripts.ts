@@ -34,6 +34,8 @@ export const script_types = {
     private readonly id: string
     get velocity(): Vec2
     set velocity([x, y]: Vec2)
+    set fixed_rotation(enabled: boolean)
+    get fixed_rotation(): boolean
   }
 
   export class Animator {
@@ -66,7 +68,6 @@ export const script_types = {
   
   class Sprite {
     private readonly id: string
-    
     set_sprite(sprite: string, order?: number) : void;
   }
 
