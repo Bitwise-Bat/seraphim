@@ -1,9 +1,30 @@
-import type { MainModule } from '../build/web-debug/seraphim.js'
-
 // The part of the 'seraphim' module that works wherever a world runs: in the editor and on the server. Each host adds
 // its own capabilities on top, such as the editor's camera and input.
 
-export type World = MainModule['World']
+export type World = {
+  get_transform(id: string): { x: number; y: number; rotation: number; scale_x: number; scale_y: number } | null
+  set_transform(id: string, x: number, y: number, rotation: number, scale_x: number, scale_y: number): void
+  find_entity(name: string): string
+  get_velocity(id: string): { x: number; y: number } | null
+  set_velocity(id: string, x: number, y: number): void
+  has_body(id: string): boolean
+  get_clip(id: string): string | null | undefined
+  set_clip(id: string, clip: string): void
+  has_animator(id: string): boolean
+  has_tilemap(id: string): boolean
+  find_path(tilemap_id: string, blocking_layer: number, start_x: number, start_y: number, end_x: number, end_y: number): unknown
+  get_cell_at_coord(tilemap_id: string, world_x: number, world_y: number): unknown
+  get_cell_center(tilemap_id: string, cell_x: number, cell_y: number): unknown
+  create_entity(name: string): string
+  add_component(id: string, component: string): void
+  set_sprite(id: string, sprite: string, order?: number): void
+  has_sprite(id: string): boolean
+  set_animation_set(id: string, animation_set: string): void
+  get_animation_set(id: string): string | undefined
+  is_local(id: string): boolean
+  set_local_id(id: number): void
+  set_tick_handler(handler: (() => void) | null): void
+}
 
 export type Vec2 = [number, number]
 
@@ -38,13 +59,13 @@ export function create_world_api(world: World, tick_seconds: number) {
     set clip(clip: string) {
       world.set_clip(this.id, clip)
     }
-    
-    get set() : string | undefined {
-      return world.get_animation_set(this.id);
+
+    get set(): string | undefined {
+      return world.get_animation_set(this.id)
     }
-    
+
     set set(set: string) {
-      world.set_animation_set(this.id, set);
+      world.set_animation_set(this.id, set)
     }
   }
 
@@ -72,7 +93,7 @@ export function create_world_api(world: World, tick_seconds: number) {
       this.id = id
     }
 
-    set_sprite(sprite: string, order = 0) {
+    set_sprite(sprite: string, order = 0): void {
       world.set_sprite(this.id, sprite, order)
     }
   }
@@ -113,12 +134,12 @@ export function create_world_api(world: World, tick_seconds: number) {
       this.id = id
       this.name = name
     }
-    
+
     is_local(): boolean {
       return world.is_local(this.id)
     }
 
-    add_component(component: string) {
+    add_component(component: string): void {
       world.add_component(this.id, component)
     }
 
@@ -189,8 +210,8 @@ export function create_world_api(world: World, tick_seconds: number) {
     const id = world.find_entity(name)
     return id ? new Entity(id, name) : undefined
   }
-  
-  function create_entity(name: string){
+
+  function create_entity(name: string): Entity {
     const id = world.create_entity(name)
     return new Entity(id, name)
   }
