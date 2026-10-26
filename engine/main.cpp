@@ -68,22 +68,22 @@ struct engine_api
     {
         if (!g_app)
             return "The engine has not started yet";
-        
+
         auto scene = seraphim::scene::parse_scene(json);
         if (!scene)
             return std::move(scene.error());
-        
+
         // The voices belong to the old scene's entities.
         seraphim::platform::stop_all_voices();
         g_app->world.emplace(std::move(*scene));
         seraphim::scene::g_world = &*g_app->world;
-        
+
         if (g_app->assets)
         {
             seraphim::scene::animation_system::resolve(g_app->world->scene.registry(), *g_app->assets);
             seraphim::scene::audio_system::resolve(g_app->world->scene.registry(), *g_app->assets);
         }
-        
+
         return {};
     }
 
