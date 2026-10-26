@@ -11,7 +11,7 @@ export function PlayControls() {
   const { is_running } = useServerStatus()
 
   function start_server() {
-    if (project.status !== 'open') return
+    if (project.status !== 'open' || is_running) return
     launch_server(project.directory.name)
   }
 

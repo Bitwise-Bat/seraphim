@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { server_url } from './server_connection'
 
 export function launch_server(project_name: string): void {
-  window.location.href = `seraphim://${encodeURIComponent(project_name)}`
+  const iframe = document.createElement('iframe')
+  iframe.style.display = 'none'
+  iframe.src = `seraphim://${encodeURIComponent(project_name)}`
+  document.body.appendChild(iframe)
+  setTimeout(() => iframe.remove(), 2000)
 }
 
 export function useServerStatus() {
