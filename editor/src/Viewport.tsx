@@ -3,6 +3,7 @@ import type { MainModule } from 'seraphim/seraphim.js'
 import { ColliderOutlines } from './ColliderOutlines'
 import { load_engine } from './engine'
 import { Gizmo } from './Gizmo'
+import { Performance } from './Performance'
 import { PlayControls } from './PlayControls'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
@@ -58,6 +59,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
       <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
       {!playing && <ColliderOutlines canvas_ref={canvas} />}
       {!playing && <Gizmo canvas_ref={canvas} />}
+      <Performance />
       <PlayControls />
       <ViewportOverlay canvas_ref={canvas} />
     </div>
