@@ -16,7 +16,7 @@ type spawned_entity_payload = {
   animation_set?: string
 }
 
-type snapshot_entity = { id: string; position: [number, number]; rotation: number; clip: string }
+type snapshot_entity = { id: string; position: [number, number]; rotation: number; clip: string, scale: [number, number] }
 
 type placement = { x: number; y: number; rotation: number; scale_x: number; scale_y: number }
 
@@ -144,7 +144,7 @@ export function connect_to_server(engine: MainModule): ServerConnection {
           to: entity.position,
           from_rotation: current ? current.rotation : entity.rotation,
           to_rotation: entity.rotation,
-          scale: current ? [current.scale_x, current.scale_y] : [1, 1],
+          scale: entity.scale ? [entity.scale[0], entity.scale[1]] : [1, 1],
           alpha: 0,
         })
       }

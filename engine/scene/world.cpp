@@ -173,7 +173,7 @@ std::string world::make_snapshot(glm::vec2 min, glm::vec2 max) const
         const auto p = tf.position;
         if (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)
             entities.push_back(
-                {{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}, {"clip", anim.clip}});
+                {{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}, {"clip", anim.clip}, {"scale", {tf.scale.x, tf.scale.y}}});
     }
     return nlohmann::json{{"type", "snapshot"}, {"entities", std::move(entities)}}.dump();
 }

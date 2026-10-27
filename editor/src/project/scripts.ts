@@ -36,6 +36,8 @@ export const script_types = {
     set velocity([x, y]: Vec2)
     set fixed_rotation(enabled: boolean)
     get fixed_rotation(): boolean
+    // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
+    set layers(layers: [number, number]): void
   }
 
   export class Animator {

@@ -35,6 +35,7 @@ class physics_system
     b2BodyId create_body(entt::entity entity, scene& scene);
     void set_fixed_rotation(entt::entity entity, bool enabled);
     [[nodiscard]] bool get_fixed_rotation(entt::entity entity);
+    void set_layer(entt::entity entity, std::uint8_t category, std::uint8_t mask);
 
   private:
     b2WorldId m_world;

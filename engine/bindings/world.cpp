@@ -350,6 +350,15 @@ struct world_api
             return false;
         return g_world->physics->get_fixed_rotation(entity);
     }
+    
+    static void set_collision_layer(const std::string& id, std::uint8_t category, std::uint8_t mask)
+    {
+        if (!g_world)
+            return;
+        auto entity = g_world->scene.find(id);
+        if (entity == entt::null) return;
+        g_world->physics->set_layer(entity, category, mask);
+    }
 };
 
 } // namespace
@@ -387,5 +396,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_owner_id", &world_api::set_owner_id)
         .class_function("get_owner_id", &world_api::get_owner_id)
         .class_function("set_fixed_rotation", &world_api::set_fixed_rotation)
-        .class_function("get_fixed_rotation", &world_api::get_fixed_rotation);
+        .class_function("get_fixed_rotation", &world_api::get_fixed_rotation)
+        .class_function("set_collision_layer", &world_api::set_collision_layer);
 }

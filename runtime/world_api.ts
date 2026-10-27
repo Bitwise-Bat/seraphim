@@ -71,6 +71,11 @@ export function create_world_api(world: World, tick_seconds: number) {
     set fixed_rotation(enabled: boolean) {
       world.set_fixed_rotation(this.id, enabled)
     }
+    
+    // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
+    set layers(layers: [number, number]){
+      world.set_collision_layer(this.id, layers[0], layers[1]);
+    }
   }
 
   class Sprite {

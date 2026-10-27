@@ -204,4 +204,24 @@ bool physics_system::get_fixed_rotation(entt::entity entity)
         return false;
     return b2Body_IsFixedRotation(body->second);
 }
+
+void physics_system::set_layer(entt::entity entity, std::uint8_t category, std::uint8_t mask)
+{
+    const auto body_it = m_bodies.find(entity);
+    if (body_it == m_bodies.end())
+        return;
+    
+    const b2BodyId body_id = body_it->second;
+    
+    b2ShapeId shape_id{};
+    const size_t count = b2Body_GetShapes(body_id, &shape_id, 1);
+    if (count >  0)
+    {
+        b2Filter filter{};
+        filter.categoryBits = category;
+        filter.maskBits = mask;
+        b2Shape_SetFilter(shape_id, filter);
+    }
+    
+}
 } // namespace seraphim::scene
