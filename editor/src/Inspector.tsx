@@ -19,6 +19,7 @@ import {
   type Scripts,
   type Sprite,
   type Tilemap,
+  type TilemapOrientation,
   type Transform,
 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
@@ -345,6 +346,11 @@ function AnimatorFields({ value, on_change }: { value: Animator; on_change: (val
   )
 }
 
+const tilemap_orientations: { value: TilemapOrientation; label: string }[] = [
+  { value: 'orthogonal', label: 'Orthogonal' },
+  { value: 'isometric', label: 'Isometric' },
+]
+
 const tilemap_tools: { value: TilemapTool; label: string }[] = [
   { value: 'select', label: 'Select' },
   { value: 'brush', label: 'Brush' },
@@ -368,6 +374,14 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
           placeholder="Drop a .tileset.json here"
           accepts={is_tileset_name}
           on_change={(tileset) => on_change({ ...value, tileset })}
+        />
+      </Row>
+      <Row label="Orientation">
+        <SelectField
+          label="Orientation"
+          value={value.orientation}
+          options={tilemap_orientations}
+          on_change={(orientation) => on_change({ ...value, orientation })}
         />
       </Row>
       <Row label="Cell size">

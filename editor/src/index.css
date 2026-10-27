@@ -505,7 +505,7 @@ button:focus-visible,
   stroke-dasharray: 4 3;
 }
 
-.tilemap-bounds rect {
+.tilemap-bounds polygon {
   fill: none;
   stroke: var(--accent);
   stroke-width: 1;

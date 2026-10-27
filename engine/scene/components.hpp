@@ -97,15 +97,23 @@ struct animator
     float elapsed = 0.0F;
 };
 
-// A grid of cells filled from one tileset. The transform's position is the top-left corner of the map, and rows run
-// downwards from there, so the scene file reads like the map looks.
+enum class tilemap_orientation : std::uint8_t
+{
+    orthogonal,
+    // Cells are diamonds: columns run down to the right and rows down to the left.
+    isometric,
+};
+
+// A grid of cells filled from one tileset. The transform's position is the top-left corner of the map, or the top
+// corner of an isometric one, and rows run downwards from there, so the scene file reads like the map looks.
 struct tilemap
 {
     // Asset id of the tileset.
     std::string tileset;
     // Resolved from the asset id when the scene loads.
     asset::tileset_handle handle;
-    // In world units, before the transform's scale.
+    tilemap_orientation orientation = tilemap_orientation::orthogonal;
+    // In world units, before the transform's scale. For isometric maps this is the diamond's full width and height.
     glm::vec2 cell_size{1.0F};
     // In cells.
     glm::uvec2 size{0};

@@ -113,6 +113,11 @@ constexpr std::array collider_shape_names{
     enum_name{collider_shape::circle, "circle"},
 };
 
+constexpr std::array tilemap_orientation_names{
+    enum_name{tilemap_orientation::orthogonal, "orthogonal"},
+    enum_name{tilemap_orientation::isometric, "isometric"},
+};
+
 template <typename Enum, std::size_t Count>
 bool read(const json& value, Enum& out, const std::array<enum_name<Enum>, Count>& names)
 {
@@ -144,6 +149,11 @@ bool read(const json& value, body_type& out)
 bool read(const json& value, collider_shape& out)
 {
     return read(value, out, collider_shape_names);
+}
+
+bool read(const json& value, tilemap_orientation& out)
+{
+    return read(value, out, tilemap_orientation_names);
 }
 
 template <typename T>
@@ -265,8 +275,8 @@ std::optional<tilemap> read_tilemap(const json& value)
 {
     tilemap out;
     if (!value.is_object() || !read_field(value, "tileset", out.tileset) ||
-        !read_field(value, "cell_size", out.cell_size) || !read_field(value, "size", out.size) ||
-        !read_field(value, "order", out.order))
+        !read_field(value, "orientation", out.orientation) || !read_field(value, "cell_size", out.cell_size) ||
+        !read_field(value, "size", out.size) || !read_field(value, "order", out.order))
         return std::nullopt;
 
     const auto layers = value.find("layers");
@@ -480,8 +490,11 @@ std::string serialize_scene(const scene& scene)
             for (const auto& tiles : map->layers)
                 layers.push_back(write_layer(tiles, map->size));
             components["tilemap"] = {
-                {"tileset", map->tileset},  {"cell_size", write(map->cell_size)},
-                {"size", write(map->size)}, {"layers", std::move(layers)},
+                {"tileset", map->tileset},
+                {"orientation", name_of(map->orientation, tilemap_orientation_names)},
+                {"cell_size", write(map->cell_size)},
+                {"size", write(map->size)},
+                {"layers", std::move(layers)},
                 {"order", map->order},
             };
         }

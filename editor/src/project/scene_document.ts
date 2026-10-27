@@ -67,11 +67,14 @@ export type TilemapLayer = {
   rows: string[]
 }
 
-// The transform's position is the top-left corner of the map.
+export type TilemapOrientation = 'orthogonal' | 'isometric'
+
+// The transform's position is the top-left corner of the map, or the top corner of an isometric one.
 export type Tilemap = {
   // Asset id of the tileset, or empty for none.
   tileset: string
-  // In world units, before the transform's scale.
+  orientation: TilemapOrientation
+  // In world units, before the transform's scale. For isometric maps this is the diamond's full width and height.
   cell_size: Vec2
   // In cells.
   size: Vec2
@@ -131,7 +134,14 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
   }),
   animator: () => ({ animation_set: '', clip: '' }),
   audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false, spatial: false }),
-  tilemap: () => ({ tileset: '', cell_size: [1, 1], size: [16, 16], layers: [empty_layer([16, 16])], order: 0 }),
+  tilemap: () => ({
+    tileset: '',
+    orientation: 'orthogonal',
+    cell_size: [1, 1],
+    size: [16, 16],
+    layers: [empty_layer([16, 16])],
+    order: 0,
+  }),
   networked: () => ({}),
   scripts: () => ({ assets: [] }),
 }

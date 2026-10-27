@@ -5,6 +5,7 @@
 #include "render/renderer.hpp"
 #include "scene/components.hpp"
 #include "scene/scene.hpp"
+#include "scene/tilemap_grid.hpp"
 
 #include <algorithm>
 #include <array>
@@ -78,6 +79,14 @@ void sprite_system::draw_tilemap(const transform& placement, const tilemap& map,
     const float cosine = std::cos(placement.rotation);
     const float sine = std::sin(placement.rotation);
 
+    // Isometric tiles keep their image's proportions and hang down from the top of their diamond, so blocks and walls
+    // taller than the diamond show their sides below it while the top face lines up with the grid.
+    glm::vec2 tile = cell;
+    if (map.orientation == tilemap_orientation::isometric)
+        tile.y = std::abs(cell.x) * glm::sign(cell.y) * static_cast<float>(tileset->tile_size.y) /
+                 static_cast<float>(tileset->tile_size.x);
+    const glm::vec2 drop{0.0F, (cell.y - tile.y) * 0.5F};
+
     // Only cells the camera can see are drawn. Mapping the corners of the view into grid space finds them without
     // visiting the others, and stays correct when the map is rotated or flipped.
     glm::vec2 first{std::numeric_limits<float>::max()};
@@ -88,9 +97,16 @@ void sprite_system::draw_tilemap(const transform& placement, const tilemap& map,
     {
         const glm::vec2 offset = corner - placement.position;
         const glm::vec2 local{(offset.x * cosine) + (offset.y * sine), (offset.y * cosine) - (offset.x * sine)};
-        const glm::vec2 grid{local.x / cell.x, -local.y / cell.y};
+        const glm::vec2 grid = local_to_grid(map.orientation, cell, local);
         first = glm::min(first, grid);
         last = glm::max(last, grid);
+    }
+    // An isometric tile is drawn as the rectangle around its diamond, which reaches half a cell into its neighbours,
+    // plus whatever hangs below the diamond.
+    if (map.orientation == tilemap_orientation::isometric)
+    {
+        first -= 0.5F;
+        last += 0.5F + std::max(0.0F, (tile.y - cell.y) / cell.y);
     }
     const glm::vec2 limit{map.size};
     const glm::uvec2 begin{glm::clamp(glm::floor(first), glm::vec2{0.0F}, limit)};
@@ -101,6 +117,7 @@ void sprite_system::draw_tilemap(const transform& placement, const tilemap& map,
     // Sampling half a texel inside the tile keeps linear filtering from bleeding in the neighbouring tiles' edges.
     const glm::vec2 inset = 0.5F / glm::vec2{texture_size};
 
+    // Row by row is also back to front for isometric maps, since cells that overlap on screen differ in row.
     for (const auto& tiles : map.layers)
         for (std::uint32_t y = begin.y; y < end.y; ++y)
             for (std::uint32_t x = begin.x; x < end.x; ++x)
@@ -110,13 +127,12 @@ void sprite_system::draw_tilemap(const transform& placement, const tilemap& map,
                 if (!uv_rect)
                     continue;
 
-                const glm::vec2 center{(static_cast<float>(x) + 0.5F) * cell.x,
-                                       -(static_cast<float>(y) + 0.5F) * cell.y};
+                const glm::vec2 center = grid_to_local(map.orientation, cell, glm::vec2{x, y} + 0.5F) + drop;
                 renderer.draw({
                     .texture = tileset->handle,
                     .position = placement.position + glm::vec2{(center.x * cosine) - (center.y * sine),
                                                                (center.x * sine) + (center.y * cosine)},
-                    .size = cell,
+                    .size = tile,
                     .rotation = placement.rotation,
                     .uv_rect = *uv_rect + glm::vec4{inset, -inset},
                 });

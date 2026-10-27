@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { useCameraStore } from './camera_store'
 import type { SceneEntity } from './project/scene_document'
+import { grid_to_local } from './project/tilemap'
 import { useSceneStore } from './project/scene_store'
 
 const degrees_per_radian = 180 / Math.PI
@@ -42,17 +43,16 @@ function TilemapBounds({ entity }: { entity: SceneEntity }) {
   if (!tilemap || !transform) {
     return null
   }
+  const [width, height] = tilemap.size
+  const corners = ([[0, 0], [width, 0], [width, height], [0, height]] as const).map((corner) =>
+    grid_to_local(tilemap.orientation, tilemap.cell_size, [...corner]).join(','),
+  )
   return (
     <g
       className="tilemap-bounds"
       transform={`translate(${transform.position[0]} ${transform.position[1]}) rotate(${transform.rotation * degrees_per_radian}) scale(${transform.scale[0]} ${transform.scale[1]})`}
     >
-      <rect
-        x={0}
-        y={-tilemap.size[1] * tilemap.cell_size[1]}
-        width={tilemap.size[0] * tilemap.cell_size[0]}
-        height={tilemap.size[1] * tilemap.cell_size[1]}
-      />
+      <polygon points={corners.join(' ')} />
     </g>
   )
 }

@@ -2,6 +2,7 @@
 
 #include "core/log.hpp"
 #include "scene/navigator_grid.hpp"
+#include "scene/tilemap_grid.hpp"
 
 #include <cmath>
 #include <glm/common.hpp>
@@ -139,7 +140,7 @@ std::optional<glm::uvec2> world::get_cell_at_coord(const std::string& tilemap_id
     const float sine = std::sin(placement->rotation);
     const glm::vec2 offset = point - placement->position;
     const glm::vec2 local{(offset.x * cosine) + (offset.y * sine), (offset.y * cosine) - (offset.x * sine)};
-    const glm::vec2 grid = glm::floor(glm::vec2{local.x / cell.x, -local.y / cell.y});
+    const glm::vec2 grid = glm::floor(local_to_grid(map->orientation, cell, local));
     if (grid.x < 0.0F || grid.y < 0.0F || grid.x >= static_cast<float>(map->size.x) ||
         grid.y >= static_cast<float>(map->size.y))
         return std::nullopt;
@@ -158,7 +159,7 @@ std::optional<glm::vec2> world::get_cell_center(const std::string& tilemap_id, g
     const glm::vec2 size = map->cell_size * placement->scale;
     const float cosine = std::cos(placement->rotation);
     const float sine = std::sin(placement->rotation);
-    const glm::vec2 local{(static_cast<float>(cell.x) + 0.5F) * size.x, -(static_cast<float>(cell.y) + 0.5F) * size.y};
+    const glm::vec2 local = grid_to_local(map->orientation, size, glm::vec2{cell} + 0.5F);
     return placement->position +
            glm::vec2{(local.x * cosine) - (local.y * sine), (local.x * sine) + (local.y * cosine)};
 }

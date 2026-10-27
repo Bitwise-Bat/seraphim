@@ -1,4 +1,4 @@
-import type { Tilemap, TilemapLayer, Transform, Vec2 } from './scene_document'
+import type { Tilemap, TilemapLayer, TilemapOrientation, Transform, Vec2 } from './scene_document'
 
 // Column and row, counted from the top-left cell.
 export type Cell = [number, number]
@@ -37,16 +37,28 @@ export function resize_tilemap(map: Tilemap, size: Vec2): Tilemap {
   return { ...map, size, layers }
 }
 
+// Mirrors engine/scene/tilemap_grid.hpp: cell (x, y) covers [x, x + 1) × [y, y + 1) in grid space.
+function local_to_grid(orientation: TilemapOrientation, [cell_x, cell_y]: Vec2, [local_x, local_y]: Vec2): Vec2 {
+  const scaled_x = local_x / cell_x
+  const scaled_y = -local_y / cell_y
+  return orientation === 'orthogonal' ? [scaled_x, scaled_y] : [scaled_y + scaled_x, scaled_y - scaled_x]
+}
+
+export function grid_to_local(orientation: TilemapOrientation, [cell_x, cell_y]: Vec2, [grid_x, grid_y]: Vec2): Vec2 {
+  return orientation === 'orthogonal'
+    ? [grid_x * cell_x, -grid_y * cell_y]
+    : [((grid_x - grid_y) * cell_x) / 2, (-(grid_x + grid_y) * cell_y) / 2]
+}
+
 // Undoes the transform the engine draws the map with; undefined outside the map.
 export function cell_at(map: Tilemap, transform: Transform, world: Vec2): Cell | undefined {
   const offset_x = world[0] - transform.position[0]
   const offset_y = world[1] - transform.position[1]
   const cosine = Math.cos(transform.rotation)
   const sine = Math.sin(transform.rotation)
-  const local_x = offset_x * cosine + offset_y * sine
-  const local_y = offset_y * cosine - offset_x * sine
-  const x = Math.floor(local_x / (map.cell_size[0] * transform.scale[0]))
-  const y = Math.floor(-local_y / (map.cell_size[1] * transform.scale[1]))
+  const cell: Vec2 = [map.cell_size[0] * transform.scale[0], map.cell_size[1] * transform.scale[1]]
+  const local: Vec2 = [offset_x * cosine + offset_y * sine, offset_y * cosine - offset_x * sine]
+  const [x, y] = local_to_grid(map.orientation, cell, local).map(Math.floor)
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= map.size[0] || y >= map.size[1]) {
     return undefined
   }
