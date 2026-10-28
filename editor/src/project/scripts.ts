@@ -37,7 +37,7 @@ export const script_types = {
     set fixed_rotation(enabled: boolean)
     get fixed_rotation(): boolean
     // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
-    set layers(layers: [number, number]): void
+    set layers(layers: [number, number])
   }
 
   export class Animator {
@@ -127,7 +127,7 @@ export const script_types = {
     // Each read returns a copy, so assign a whole new value to move it: camera.position = [x, y].
     position: Vec2
     screen_to_world(x: number, y: number): { x: number; y: number }
-    set view_height(view_height: number): void
+    set view_height(view_height: number)
     get view_height(): number
   }
 
@@ -181,6 +181,15 @@ export const script_types = {
     send(name: string, data?: unknown): void
     on(name: string, cb: (data: unknown) => void): void
     off(name: string, cb: (data: unknown) => void): void
+  }
+
+  export type UITag = {
+    div: unknown
+    span: unknown
+    button: unknown
+    input: unknown
+    img: unknown
+    p: unknown
   }
   
   export class ui<K extends keyof UITag = keyof UITag> {
