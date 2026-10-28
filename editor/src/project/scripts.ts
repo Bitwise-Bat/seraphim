@@ -194,10 +194,13 @@ export const script_types = {
   }
   
   export class ui<K extends keyof UITag = keyof UITag> {
-    constructor(tag: K, name?: string)
+    constructor(tag: K, name: string)
     set_style(key: string, value: string): void
     set text(text: string)
     get text(): string
+    set img(src: string)
+    get img(): string
+    public remove(): void
   }
 }
 `,
