@@ -13,6 +13,7 @@ import { AssetThumbnail } from './AssetThumbnail'
 import { AssetTree } from './AssetTree'
 import { ContextMenu, type ContextMenuItem } from './ContextMenu'
 import { find_folder, join_path, type AssetEntry } from './project/assets'
+import { useSettingsStore } from './settings_store'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import { script_template } from './project/scripts'
 import { RenameInput } from './RenameInput'
@@ -109,7 +110,9 @@ type MenuState = { x: number; y: number; items: ContextMenuItem[]; trigger: HTML
 
 export function AssetBrowser() {
   const [selected, set_selected] = useState(0)
-  const [tree_width, set_tree_width] = useState(192)
+  const tree_width = useSettingsStore((store) => store.asset_tree_width)
+  const set_setting = useSettingsStore((store) => store.set_setting)
+  const set_tree_width = (width: SetStateAction<number>) => set_setting('asset_tree_width', width)
 
   return (
     <AssetBrowserContext value={folders[selected].store}>

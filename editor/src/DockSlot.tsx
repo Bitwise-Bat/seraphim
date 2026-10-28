@@ -1,13 +1,16 @@
-import { useState } from 'react'
 import { AssetBrowser } from './AssetBrowser'
 import { Console } from './Console'
 import { useConsoleStore } from './console/console_store'
+import { useSettingsStore, type DockTab } from './settings_store'
 
-export type DockTab = 'assets' | 'console'
+export type { DockTab }
 
 export function DockSlot() {
-  const [active_tab, set_active_tab] = useState<DockTab>('assets')
+  const active_tab = useSettingsStore((store) => store.dock_tab)
+  const set_setting = useSettingsStore((store) => store.set_setting)
   const error_count = useConsoleStore((store) => store.error_count)
+
+  const set_active_tab = (tab: DockTab) => set_setting('dock_tab', tab)
 
   return (
     <div className="dock-slot" aria-label="Bottom dock">
