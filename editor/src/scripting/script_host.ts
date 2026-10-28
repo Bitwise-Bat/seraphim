@@ -6,6 +6,7 @@ import { write_server_bundle } from '../project/project'
 import type { SceneDocument } from '../project/scene_document'
 import { compile_scripts, script_side, type ScriptSide } from './compile'
 import { create_api } from './seraphim_api'
+import { files_in } from '../project/assets'
 
 export type { ScriptRun }
 
@@ -38,7 +39,7 @@ export async function start_scripts(
   document: SceneDocument,
   root: AssetFolder | undefined,
 ): Promise<ScriptRun> {
-  const files = root ? used_scripts(document, root) : []
+  const files = root ? [...files_in(root)] : []
   const sides = await Promise.all(files.map(async (file) => script_side(await (await file.handle.getFile()).text())))
   const client_code = await compile_side(root!, files, sides, 'server')
   await write_server_bundle(project, await compile_side(root!, files, sides, 'client'))

@@ -1,4 +1,4 @@
-import { running, type World, type WorldApi } from './world_api.ts'
+import {Entity, running, type World, type WorldApi} from './world_api.ts'
 
 type Hook = 'on_start' | 'on_tick' | 'on_stop'
 
@@ -62,8 +62,21 @@ function call(instance: ScriptInstance, hook: Hook): void {
  */
 export function run_scripts(world: World, api: WorldApi, code: string, entities: ScriptedEntity[]): ScriptRun {
   const bundle = load_bundle(code, api)
-
   const instances: ScriptInstance[] = []
+  
+  function instantiate_and_start(entity: Entity, script_id: string){
+    const compiled = bundle[script_id]
+    if (!compiled) return
+    
+    const script_class = compiled.script as new () => InstanceType<WorldApi['Script']>
+    const object = new script_class()
+    object.entity = entity
+    
+    const instance: ScriptInstance = {path: compiled.path, object: object as ScriptInstance['object'], failed: false}
+    instances.push(instance)
+    call(instance, 'on_start')
+  }
+  
   for (const entity of entities) {
     for (const id of entity.components.scripts?.assets ?? []) {
       const compiled = bundle[id]
@@ -80,6 +93,9 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
       instances.push({ path: compiled.path, object: object as ScriptInstance['object'], failed: false })
     }
   }
+  
+  api.set_script_attach_handler(instantiate_and_start)
+
 
   for (const instance of instances) {
     call(instance, 'on_start')
@@ -90,9 +106,10 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
     }
     api.time.tick += 1
   })
-
+  
   return {
     stop() {
+      api.set_script_attach_handler(null)
       world.set_tick_handler(null)
       for (const instance of instances) {
         call(instance, 'on_stop')

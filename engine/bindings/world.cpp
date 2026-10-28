@@ -214,6 +214,10 @@ struct world_api
         {
             static_cast<void>(registry.get_or_emplace<seraphim::scene::networked>(entity));
         }
+        else if (component == "scripts")
+        {
+            auto& scripts = registry.get_or_emplace<seraphim::scene::scripts>(entity);
+        }
     };
 
     static void set_sprite(const std::string& id, const std::string& sprite, uint8_t order = 0)
@@ -359,6 +363,19 @@ struct world_api
         if (entity == entt::null) return;
         g_world->physics->set_layer(entity, category, mask);
     }
+    
+    static void attach_script(const std::string& id, const std::string& script_id)
+    {
+        if (!g_world)
+            return;
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+        
+        auto& scripts = g_world->scene.registry().get_or_emplace<seraphim::scene::scripts>(entity);
+        if (std::ranges::find(scripts.assets, script_id) == scripts.assets.end())
+            scripts.assets.push_back(script_id);
+    }
 };
 
 } // namespace
@@ -397,5 +414,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("get_owner_id", &world_api::get_owner_id)
         .class_function("set_fixed_rotation", &world_api::set_fixed_rotation)
         .class_function("get_fixed_rotation", &world_api::get_fixed_rotation)
-        .class_function("set_collision_layer", &world_api::set_collision_layer);
+        .class_function("set_collision_layer", &world_api::set_collision_layer)
+        .class_function("attach_script", &world_api::attach_script);
 }

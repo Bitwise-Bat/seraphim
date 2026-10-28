@@ -94,6 +94,7 @@ export const script_types = {
     
     is_local(): boolean
     add_component(component_name: string): void
+    add_script(script_id: string) : void
   }
 
   export abstract class Script {
