@@ -4,6 +4,7 @@ import { useAssetStore, useScriptStore } from './project/asset_store'
 import { export_project_zip } from './project/export_project'
 import { useProjectStore } from './project/project_store'
 import { useSceneStore } from './project/scene_store'
+import { useSettingsStore } from './settings_store'
 
 export function PlayControls() {
   const playing = useSceneStore((store) => store.playing)
@@ -14,6 +15,8 @@ export function PlayControls() {
   const project = useProjectStore((store) => store.state)
   const { is_running } = useServerStatus()
   const [exporting, set_exporting] = useState(false)
+  const show_colliders = useSettingsStore((store) => store.show_colliders)
+  const toggle_setting = useSettingsStore((store) => store.toggle_setting)
 
   function start_server() {
     if (project.status !== 'open' || is_running) return
@@ -65,6 +68,16 @@ export function PlayControls() {
         onClick={export_game}
       >
         {exporting ? 'Exporting...' : 'Export'}
+      </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        aria-pressed={show_colliders}
+        disabled={!ready || playing}
+        title="Toggle collider outlines"
+        onClick={() => toggle_setting('show_colliders')}
+      >
+        Colliders
       </button>
     </div>
   )

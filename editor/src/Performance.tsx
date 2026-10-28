@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useSettingsStore } from './settings_store'
 
 type Metric = 'fps' | 'frame_time'
 
-const metrics: { value: Metric; label: string }[] = [
-  { value: 'fps', label: 'FPS' },
-  { value: 'frame_time', label: 'Frame time' },
+const metrics: { value: Metric; label: string; key: 'show_fps' | 'show_frame_time' }[] = [
+  { value: 'fps', label: 'FPS', key: 'show_fps' },
+  { value: 'frame_time', label: 'Frame time', key: 'show_frame_time' },
 ]
 
 const update_interval_ms = 500
@@ -17,9 +18,11 @@ function format_metric(metric: Metric, frame_time: number): string {
 }
 
 export function Performance() {
-  const [enabled, set_enabled] = useState<Record<Metric, boolean>>({ fps: true, frame_time: false })
+  const show_fps = useSettingsStore((store) => store.show_fps)
+  const show_frame_time = useSettingsStore((store) => store.show_frame_time)
+  const toggle_setting = useSettingsStore((store) => store.toggle_setting)
   const [frame_time, set_frame_time] = useState(0)
-  const active = enabled.fps || enabled.frame_time
+  const active = show_fps || show_frame_time
 
   useEffect(() => {
     if (!active) {
@@ -44,7 +47,9 @@ export function Performance() {
     return () => cancelAnimationFrame(frame_id)
   }, [active])
 
-  const shown = metrics.filter((option) => enabled[option.value]).map((option) => format_metric(option.value, frame_time))
+  const shown = metrics
+    .filter((option) => (option.key === 'show_fps' ? show_fps : show_frame_time))
+    .map((option) => format_metric(option.value, frame_time))
 
   return (
     <div className="performance">
@@ -53,14 +58,8 @@ export function Performance() {
         <label key={option.value} className="performance-option">
           <input
             type="checkbox"
-            checked={enabled[option.value]}
-            onChange={(event) => {
-              const next = { ...enabled, [option.value]: event.target.checked }
-              set_enabled(next)
-              if (!next.fps && !next.frame_time) {
-                set_frame_time(0)
-              }
-            }}
+            checked={option.key === 'show_fps' ? show_fps : show_frame_time}
+            onChange={() => toggle_setting(option.key)}
           />
           {option.label}
         </label>

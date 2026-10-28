@@ -8,6 +8,7 @@ import { PlayControls } from './PlayControls'
 import { useAssetStore } from './project/asset_store'
 import { sync_engine_assets } from './project/engine_assets'
 import { useSceneStore } from './project/scene_store'
+import { useSettingsStore } from './settings_store'
 import { useTilemapPainting } from './tilemap_painting'
 import { useCamera } from './viewport_camera'
 import { useViewportDrag } from './viewport_drag'
@@ -19,6 +20,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   const assets = useAssetStore((store) => store.root)
   const open_scene = useSceneStore((store) => store.open)
   const playing = useSceneStore((store) => store.playing)
+  const show_colliders = useSettingsStore((store) => store.show_colliders)
 
   useEffect(() => {
     if (canvas.current) {
@@ -58,7 +60,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
     <div className="viewport">
       <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
       {playing &&  <div className="seraphim-ui" id="seraphim-ui"></div>}
-      {!playing && <ColliderOutlines canvas_ref={canvas} />}
+      {!playing && show_colliders && <ColliderOutlines canvas_ref={canvas} />}
       {!playing && <Gizmo canvas_ref={canvas} />}
       <Performance />
       <PlayControls />

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type RefObject } from '
 import { useCameraStore } from './camera_store'
 import type { Transform, Vec2 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
+import { useSettingsStore } from './settings_store'
 
 type Mode = 'move' | 'rotate' | 'scale'
 type Handle = 'x' | 'y' | 'free' | 'rotate' | 'scale_x' | 'scale_y' | 'scale_uniform'
@@ -40,7 +41,13 @@ function axis_ratio(from: Vec2, to: Vec2, axis: Vec2): number | undefined {
   return Math.abs(start) < 1e-6 ? undefined : (to[0] * axis[0] + to[1] * axis[1]) / start
 }
 
-function dragged_transform({ handle, pointer_start, start }: Drag, pointer: Vec2): Transform {
+function dragged_transform(
+  { handle, pointer_start, start }: Drag,
+  pointer: Vec2,
+  snap_to_grid = false,
+  grid_size = 1,
+): Transform {
+  const snap = (v: number) => (snap_to_grid && grid_size > 0 ? Math.round(v / grid_size) * grid_size : v)
   const [x, y] = start.position
   const delta: Vec2 = [pointer[0] - pointer_start[0], pointer[1] - pointer_start[1]]
   const from: Vec2 = [pointer_start[0] - x, pointer_start[1] - y]
@@ -48,11 +55,11 @@ function dragged_transform({ handle, pointer_start, start }: Drag, pointer: Vec2
 
   switch (handle) {
     case 'x':
-      return { ...start, position: [x + delta[0], y] }
+      return { ...start, position: [snap(x + delta[0]), y] }
     case 'y':
-      return { ...start, position: [x, y + delta[1]] }
+      return { ...start, position: [x, snap(y + delta[1])] }
     case 'free':
-      return { ...start, position: [x + delta[0], y + delta[1]] }
+      return { ...start, position: [snap(x + delta[0]), snap(y + delta[1])] }
     case 'rotate':
       return { ...start, rotation: start.rotation + Math.atan2(to[1], to[0]) - Math.atan2(from[1], from[0]) }
     case 'scale_uniform': {
@@ -86,6 +93,9 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
   const update_entity = useSceneStore((store) => store.update_entity)
   const [mode, set_mode] = useState<Mode>('move')
   const [size, set_size] = useState<{ width: number; height: number }>()
+  const snap_to_grid = useSettingsStore((store) => store.snap_to_grid)
+  const grid_size = useSettingsStore((store) => store.grid_size)
+  const toggle_setting = useSettingsStore((store) => store.toggle_setting)
   const drag = useRef<Drag>(undefined)
 
   useEffect(() => {
@@ -133,7 +143,7 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
         if (!canvas || !entity || !drag.current) {
           return
         }
-        const next = dragged_transform(drag.current, pointer_world(canvas, event))
+        const next = dragged_transform(drag.current, pointer_world(canvas, event), snap_to_grid, grid_size)
         update_entity(entity.id, (current) =>
           current.components.transform ? { ...current, components: { ...current.components, transform: next } } : current,
         )
@@ -214,6 +224,15 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          className="toolbar-button"
+          aria-pressed={snap_to_grid}
+          title={`Snap to Grid (${grid_size}u)`}
+          onClick={() => toggle_setting('snap_to_grid')}
+        >
+          Snap
+        </button>
       </div>
     </>
   )
