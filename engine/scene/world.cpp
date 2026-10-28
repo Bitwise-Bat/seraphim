@@ -1,6 +1,5 @@
 #include "scene/world.hpp"
 
-#include "core/log.hpp"
 #include "scene/navigator_grid.hpp"
 #include "scene/tilemap_grid.hpp"
 
@@ -95,7 +94,6 @@ std::optional<std::string> world::get_clip(const std::string& id) const
 void world::set_clip(const std::string& id, const std::string& clip)
 {
     auto* player = scene.registry().try_get<animator>(scene.find(id));
-    seraphim::log::info("PLAYER {} CLIP: {}", player != nullptr, clip);
     // Setting the playing clip again, as scripts do every tick, must not restart it.
     if (!player || player->clip == clip)
         return;
@@ -172,8 +170,11 @@ std::string world::make_snapshot(glm::vec2 min, glm::vec2 max) const
     {
         const auto p = tf.position;
         if (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)
-            entities.push_back(
-                {{"id", id.id}, {"position", {p.x, p.y}}, {"rotation", tf.rotation}, {"clip", anim.clip}, {"scale", {tf.scale.x, tf.scale.y}}});
+            entities.push_back({{"id", id.id},
+                                {"position", {p.x, p.y}},
+                                {"rotation", tf.rotation},
+                                {"clip", anim.clip},
+                                {"scale", {tf.scale.x, tf.scale.y}}});
     }
     return nlohmann::json{{"type", "snapshot"}, {"entities", std::move(entities)}}.dump();
 }

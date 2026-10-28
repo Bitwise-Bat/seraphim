@@ -13,13 +13,19 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
   // Scripts may move the camera while the scene plays, so the editor keeps its hands off it until play stops.
   const playing = useSceneStore((store) => store.playing)
 
+  // Attach engine to camera store once when engine is loaded (does not re-attach on play)
+  useEffect(() => {
+    if (engine) {
+      useCameraStore.getState().attach(engine)
+    }
+  }, [engine])
+
   useEffect(() => {
     const canvas = canvas_ref.current
-    if (!canvas || !engine) {
+    if (!canvas) {
       return
     }
     const { set_camera } = useCameraStore.getState()
-    useCameraStore.getState().attach(engine)
     // Only the height matters: the camera maps view_height world units onto the canvas height.
     const units_per_css_pixel = (view_height: number) => view_height / canvas.getBoundingClientRect().height
     let panning = false
@@ -87,5 +93,5 @@ export function useCamera(canvas_ref: RefObject<HTMLCanvasElement | null>, engin
       canvas.removeEventListener('wheel', on_wheel)
       canvas.removeEventListener('contextmenu', on_context_menu)
     }
-  }, [canvas_ref, engine, playing])
+  }, [canvas_ref, playing])
 }

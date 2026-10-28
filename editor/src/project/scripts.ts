@@ -127,6 +127,8 @@ export const script_types = {
     // Each read returns a copy, so assign a whole new value to move it: camera.position = [x, y].
     position: Vec2
     screen_to_world(x: number, y: number): { x: number; y: number }
+    set view_height(view_height: number): void
+    get view_height(): number
   }
 
   export const time: {

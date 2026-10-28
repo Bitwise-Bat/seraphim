@@ -58,6 +58,13 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       // A view height of -1 keeps the current zoom.
       api.set_camera(x, y, -1)
     },
+    get view_height(): number {
+      return api.get_camera().view_height as number
+    },
+    set view_height(view_height: number){
+      const position = api.get_camera()
+      api.set_camera(position.x, position.y, view_height);
+    },
     screen_to_world(x: number, y: number): { x: number; y: number } {
       return api.screen_to_world(x, y)
     },
