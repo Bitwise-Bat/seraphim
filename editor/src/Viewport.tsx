@@ -57,11 +57,13 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   return (
     <div className="viewport">
       <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
+      {playing &&  <div className="seraphim-ui" id="seraphim-ui"></div>}
       {!playing && <ColliderOutlines canvas_ref={canvas} />}
       {!playing && <Gizmo canvas_ref={canvas} />}
       <Performance />
       <PlayControls />
       <ViewportOverlay canvas_ref={canvas} />
+
     </div>
   )
 }

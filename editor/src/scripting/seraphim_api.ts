@@ -3,6 +3,8 @@ import type { ServerConnection } from '../network/server_connection'
 import { create_world_api, type Vec2 } from '../../../runtime/world_api.ts'
 import { key_codes, type KeyName, mouse_codes, type MouseName } from './keys'
 
+const SERAPHIM_UI_ID = "seraphim-ui"
+
 // Everything exported from the module that scripts import as 'seraphim' in the editor: the shared world API plus what
 // only exists where the game is shown. Adding a capability means adding it here or in runtime/world_api.ts and declaring
 // it in script_types (project/scripts.ts).
@@ -89,6 +91,57 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     const id = engine.World.create_entity(name)
     return new Entity(id, name)
   }
+  
+  type UITag = {
+    div: HTMLDivElement
+    span: HTMLDivElement
+    button: HTMLDivElement 
+    input: HTMLDivElement
+    img: HTMLDivElement 
+    p: HTMLDivElement
+  }
+  
+  class ui<K extends keyof UITag>{
+    private readonly element: UITag[K]
+    private readonly tag: string
+    
+    constructor(tag: K,  name?: string) {
+      this.tag = tag;
+      
+      const main_element = this.main_element;
+      let element : UITag[K] | null
+      
+      if (name) {
+        element = main_element.querySelector(name);
+        if (!element) throw new Error()
+        this.element = element
+        return
+      }
+       
+      element = document.createElement(this.tag) as UITag[K];
+      if (!element) throw new Error()
+      main_element.appendChild(element)
+      this.element = element
+    }
+    
+    public set_style(key: string, value: string){
+      this.element.style.setProperty(key,  value)
+    }
+    
+    get text(){
+      return this.element.textContent
+    }
+    
+    set text(text: string){
+      this.element.textContent = text
+    }
 
-  return { ...shared, Entity, find_entity, create_entity, camera, input, net }
+    private get main_element(){
+      const el = document.getElementById(SERAPHIM_UI_ID)
+      if (!el) throw new Error(`UI Main Element didnt exists ${SERAPHIM_UI_ID}`)
+      return el;
+    }
+  }
+  
+  return { ...shared, Entity, find_entity, create_entity, camera, input, net, ui }
 }

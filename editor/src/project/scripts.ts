@@ -23,12 +23,12 @@ export const script_types = {
   export type Vec2 = readonly [number, number]
 
   export type Key = ${Object.keys(key_codes)
-    .map((key) => `'${key}'`)
-    .join(' | ')}
+      .map((key) => `'${key}'`)
+      .join(' | ')}
 
   export type MouseButton = ${Object.keys(mouse_codes)
-    .map((button) => `'${button}'`)
-    .join(' | ')}
+      .map((button) => `'${button}'`)
+      .join(' | ')}
 
   export class Body {
     private readonly id: string
@@ -179,6 +179,13 @@ export const script_types = {
     send(name: string, data?: unknown): void
     on(name: string, cb: (data: unknown) => void): void
     off(name: string, cb: (data: unknown) => void): void
+  }
+  
+  export class ui<K extends keyof UITag = keyof UITag> {
+    constructor(tag: K, name?: string)
+    set_style(key: string, value: string): void
+    set text(text: string)
+    get text(): string
   }
 }
 `,
