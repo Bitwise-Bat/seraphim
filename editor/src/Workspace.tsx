@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AssetBrowser } from './AssetBrowser'
+import { DockSlot } from './DockSlot'
 import { Inspector } from './Inspector'
 import { useAssetStore, useScriptStore } from './project/asset_store'
 import { useSceneStore } from './project/scene_store'
@@ -73,7 +73,7 @@ export function Workspace({ project }: { project: FileSystemDirectoryHandle }) {
         <Inspector />
       </div>
       <Splitter
-        label="Resize asset panel"
+        label="Resize dock panel"
         orientation="horizontal"
         panel="after"
         size={asset_panel_height}
@@ -81,7 +81,7 @@ export function Workspace({ project }: { project: FileSystemDirectoryHandle }) {
         max={asset_panel_limits.max}
         on_resize={set_asset_panel_height}
       />
-      <AssetBrowser />
+      <DockSlot />
     </div>
   )
 }
