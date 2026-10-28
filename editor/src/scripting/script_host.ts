@@ -10,7 +10,7 @@ import { create_api } from './seraphim_api'
 export type { ScriptRun }
 
 // Resolves every script the scene uses, in first-use order. Throws when an entity refers to a script that is gone.
-function used_scripts(document: SceneDocument, root: AssetFolder): AssetFile[] {
+export function used_scripts(document: SceneDocument, root: AssetFolder): AssetFile[] {
   const used = new Map<string, AssetFile>()
   for (const entity of document.entities) {
     for (const id of entity.components.scripts?.assets ?? []) {
@@ -24,7 +24,7 @@ function used_scripts(document: SceneDocument, root: AssetFolder): AssetFile[] {
   return [...used.values()]
 }
 
-async function compile_side(root: AssetFolder, files: AssetFile[], sides: ScriptSide[], skipped: ScriptSide) {
+export async function compile_side(root: AssetFolder, files: AssetFile[], sides: ScriptSide[], skipped: ScriptSide) {
   const included = files.filter((_, index) => sides[index] !== skipped)
   return included.length > 0 ? compile_scripts(root, included) : ''
 }

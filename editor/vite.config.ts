@@ -11,6 +11,7 @@ export default defineConfig(({ command }) => {
     resolve: {
       alias: {
         seraphim: fileURLToPath(new URL(`../build/${engine_preset}`, import.meta.url)),
+        'seraphim-release': fileURLToPath(new URL('../build/web-release', import.meta.url)),
       },
     },
     server: {

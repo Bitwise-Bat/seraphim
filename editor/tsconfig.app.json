@@ -14,7 +14,10 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "paths": { "seraphim/*": ["../build/web-debug/*"] },
+    "paths": {
+      "seraphim/*": ["../build/web-debug/*"],
+      "seraphim-release/*": ["../build/web-release/*"]
+    },
     "jsx": "react-jsx",
 
     /* Linting */
