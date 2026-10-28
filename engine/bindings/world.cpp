@@ -354,16 +354,17 @@ struct world_api
             return false;
         return g_world->physics->get_fixed_rotation(entity);
     }
-    
+
     static void set_collision_layer(const std::string& id, std::uint8_t category, std::uint8_t mask)
     {
         if (!g_world)
             return;
         auto entity = g_world->scene.find(id);
-        if (entity == entt::null) return;
+        if (entity == entt::null)
+            return;
         g_world->physics->set_layer(entity, category, mask);
     }
-    
+
     static void attach_script(const std::string& id, const std::string& script_id)
     {
         if (!g_world)
@@ -371,7 +372,7 @@ struct world_api
         const auto entity = g_world->scene.find(id);
         if (entity == entt::null)
             return;
-        
+
         auto& scripts = g_world->scene.registry().get_or_emplace<seraphim::scene::scripts>(entity);
         if (std::ranges::find(scripts.assets, script_id) == scripts.assets.end())
             scripts.assets.push_back(script_id);

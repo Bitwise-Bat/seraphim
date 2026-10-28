@@ -71,15 +71,16 @@ export const useSettingsStore = create<SettingsStore>()(
       set_setting(key, value) {
         set((state) => {
           const current = state[key]
-          const next = typeof value === 'function'
-            ? (value as (c: EditorSettings[typeof key]) => EditorSettings[typeof key])(current)
-            : value
+          const next =
+            typeof value === 'function'
+              ? (value as (c: EditorSettings[typeof key]) => EditorSettings[typeof key])(current)
+              : value
           return { [key]: next } as unknown as Partial<SettingsStore>
         })
       },
 
       toggle_setting(key) {
-        set((state) => ({ [key]: !state[key] } as unknown as Partial<SettingsStore>))
+        set((state) => ({ [key]: !state[key] }) as unknown as Partial<SettingsStore>)
       },
 
       reset_defaults() {
@@ -100,13 +101,25 @@ export const useSettingsStore = create<SettingsStore>()(
         if (typeof merged.dock_height !== 'number' || !Number.isFinite(merged.dock_height) || merged.dock_height <= 0) {
           merged.dock_height = default_settings.dock_height
         }
-        if (typeof merged.scene_panel_width !== 'number' || !Number.isFinite(merged.scene_panel_width) || merged.scene_panel_width <= 0) {
+        if (
+          typeof merged.scene_panel_width !== 'number' ||
+          !Number.isFinite(merged.scene_panel_width) ||
+          merged.scene_panel_width <= 0
+        ) {
           merged.scene_panel_width = default_settings.scene_panel_width
         }
-        if (typeof merged.inspector_width !== 'number' || !Number.isFinite(merged.inspector_width) || merged.inspector_width <= 0) {
+        if (
+          typeof merged.inspector_width !== 'number' ||
+          !Number.isFinite(merged.inspector_width) ||
+          merged.inspector_width <= 0
+        ) {
           merged.inspector_width = default_settings.inspector_width
         }
-        if (typeof merged.asset_tree_width !== 'number' || !Number.isFinite(merged.asset_tree_width) || merged.asset_tree_width <= 0) {
+        if (
+          typeof merged.asset_tree_width !== 'number' ||
+          !Number.isFinite(merged.asset_tree_width) ||
+          merged.asset_tree_width <= 0
+        ) {
           merged.asset_tree_width = default_settings.asset_tree_width
         }
         if (
@@ -116,7 +129,11 @@ export const useSettingsStore = create<SettingsStore>()(
         ) {
           merged.camera_position = default_settings.camera_position
         }
-        if (typeof merged.camera_view_height !== 'number' || !Number.isFinite(merged.camera_view_height) || merged.camera_view_height <= 0) {
+        if (
+          typeof merged.camera_view_height !== 'number' ||
+          !Number.isFinite(merged.camera_view_height) ||
+          merged.camera_view_height <= 0
+        ) {
           merged.camera_view_height = default_settings.camera_view_height
         }
         return merged
