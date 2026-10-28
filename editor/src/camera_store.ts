@@ -1,5 +1,6 @@
 import type { MainModule } from 'seraphim/seraphim.js'
 import { create } from 'zustand'
+import { useSettingsStore } from './settings_store'
 
 type CameraStore = {
   position: { x: number; y: number }
@@ -10,7 +11,7 @@ type CameraStore = {
 }
 
 // Only the editor moves its camera, so the store is the source of truth and the engine is just told about changes.
-// Starts where the engine's camera2d does.
+// Starts from persisted settings, pushing them to the engine when attached.
 export const useCameraStore = create<CameraStore>()((set, get) => {
   let engine: MainModule | undefined
 
@@ -19,9 +20,11 @@ export const useCameraStore = create<CameraStore>()((set, get) => {
     engine?.Engine.set_camera(position.x, position.y, view_height)
   }
 
+  const initial = useSettingsStore.getState()
+
   return {
-    position: { x: 0, y: 0 },
-    view_height: 10,
+    position: { x: initial.camera_position[0], y: initial.camera_position[1] },
+    view_height: initial.camera_view_height,
 
     attach(next_engine) {
       engine = next_engine
@@ -31,6 +34,9 @@ export const useCameraStore = create<CameraStore>()((set, get) => {
     set_camera(position, view_height) {
       set({ position, view_height })
       push()
+      const { set_setting } = useSettingsStore.getState()
+      set_setting('camera_position', [position.x, position.y])
+      set_setting('camera_view_height', view_height)
     },
   }
 })

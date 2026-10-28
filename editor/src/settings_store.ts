@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { Vec2 } from './project/scene_document'
 
 export type DockTab = 'assets' | 'console'
 
@@ -23,6 +24,10 @@ export type EditorSettings = {
   scene_panel_width: number
   inspector_width: number
   asset_tree_width: number
+
+  // Camera
+  camera_position: Vec2
+  camera_view_height: number
 }
 
 type BooleanSettingKey = {
@@ -53,6 +58,9 @@ const default_settings: EditorSettings = {
   scene_panel_width: 220,
   inspector_width: 280,
   asset_tree_width: 192,
+
+  camera_position: [0, 0],
+  camera_view_height: 10,
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -81,7 +89,14 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'seraphim-editor-settings',
       merge: (persisted_state, current_state) => {
+        const any_persisted = persisted_state as Record<string, unknown> | undefined
         const merged = { ...current_state, ...(persisted_state as Partial<EditorSettings>) }
+
+        // Migrate typo if previously stored
+        if (any_persisted && !any_persisted.camera_position && any_persisted.camera_postion) {
+          merged.camera_position = any_persisted.camera_postion as Vec2
+        }
+
         if (typeof merged.dock_height !== 'number' || !Number.isFinite(merged.dock_height) || merged.dock_height <= 0) {
           merged.dock_height = default_settings.dock_height
         }
@@ -93,6 +108,16 @@ export const useSettingsStore = create<SettingsStore>()(
         }
         if (typeof merged.asset_tree_width !== 'number' || !Number.isFinite(merged.asset_tree_width) || merged.asset_tree_width <= 0) {
           merged.asset_tree_width = default_settings.asset_tree_width
+        }
+        if (
+          !Array.isArray(merged.camera_position) ||
+          merged.camera_position.length !== 2 ||
+          !merged.camera_position.every(Number.isFinite)
+        ) {
+          merged.camera_position = default_settings.camera_position
+        }
+        if (typeof merged.camera_view_height !== 'number' || !Number.isFinite(merged.camera_view_height) || merged.camera_view_height <= 0) {
+          merged.camera_view_height = default_settings.camera_view_height
         }
         return merged
       },
