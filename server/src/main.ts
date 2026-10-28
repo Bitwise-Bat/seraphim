@@ -118,8 +118,24 @@ const server = {
 
     return id
   },
-  despawn(id: string): void {
+  despawn(id_or_name: string): void {
+    let id = id_or_name
+    if (!spawned_entities.has(id)) {
+      for (const [entity_id, data] of spawned_entities) {
+        if (data.name === id_or_name) {
+          id = entity_id
+          break
+        }
+      }
+      if (id === id_or_name) {
+        const found = engine.World.find_entity(id_or_name)
+        if (found) {
+          id = found
+        }
+      }
+    }
     spawned_entities.delete(id)
+    engine.World.set_transform(id, -99999, -99999, 0, 0, 0)
     broadcast({ type: 'despawn_entity', id })
   },
   set_clip(id: string,  clip: string): void {

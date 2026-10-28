@@ -2,7 +2,7 @@ import type { Player } from './players.js'
 
 export type EventHandler = (player: Player, data: unknown) => void
 
-type QueuedEvent = { player_id: number; name: string; data: unknown }
+type QueuedEvent = { player_id: number; player?: Player; name: string; data: unknown }
 
 // Events that clients emit. They arrive between ticks, so they wait in a queue until the next tick hands them to the
 // handlers that server scripts registered with server.on.
@@ -20,7 +20,7 @@ export function create_events() {
     },
 
     emit(name: string, player: Player, data: unknown): void {
-      queue.push({ player_id: player.id, name, data })
+      queue.push({ player_id: player.id, player, name, data })
     },
 
     // Clients are not trusted, so anything but a well-formed event message is ignored.
@@ -31,12 +31,13 @@ export function create_events() {
       }
     },
 
-    // Events of players who left before the tick are dropped. A handler that throws only loses its own event.
+    // Events of players who left before the tick are dropped (unless emitted locally with a player object).
+    // A handler that throws only loses its own event.
     dispatch(find_player: (id: number) => Player | undefined): void {
       const due = queue
       queue = []
-      for (const { player_id, name, data } of due) {
-        const player = find_player(player_id)
+      for (const { player_id, player: queued_player, name, data } of due) {
+        const player = queued_player ?? find_player(player_id)
         if (!player) {
           continue
         }

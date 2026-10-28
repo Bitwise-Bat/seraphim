@@ -56,6 +56,7 @@ export function connect_to_server(engine: MainModule): ServerConnection {
 
   const waiting: string[] = []
   const event_handlers = new Map<string, ((data: unknown) => void)[]>()
+  const unhandled_events: { name: string; data: unknown }[] = []
   socket.addEventListener('open', () => {
     for (const text of waiting.splice(0)) {
       socket.send(text)
@@ -123,6 +124,7 @@ export function connect_to_server(engine: MainModule): ServerConnection {
       }
     } else if (message.type === 'despawn_entity' && message.id) {
       interpolations.delete(message.id)
+      engine.World.set_transform(message.id, -99999, -99999, 0, 0, 0)
     } else if (message.type === 'snapshot' && message.entities) {
       for (const entity of message.entities) {
         let current = engine.World.get_transform(entity.id) as placement | null
@@ -156,10 +158,12 @@ export function connect_to_server(engine: MainModule): ServerConnection {
     } else if (message.type === 'event' && typeof (message as { name?: unknown }).name === 'string') {
       const event_msg = message as { name: string; data?: unknown }
       const handlers = event_handlers.get(event_msg.name)
-      if (handlers) {
+      if (handlers && handlers.length > 0) {
         for (const handler of handlers) {
           handler(event_msg.data)
         }
+      } else {
+        unhandled_events.push({ name: event_msg.name, data: event_msg.data })
       }
     }
   })
@@ -191,11 +195,20 @@ export function connect_to_server(engine: MainModule): ServerConnection {
     send,
     on(name: string, handler: (data: unknown) => void) {
       event_handlers.set(name, [...(event_handlers.get(name) ?? []), handler])
+      for (let i = 0; i < unhandled_events.length; ) {
+        if (unhandled_events[i].name === name) {
+          const [event] = unhandled_events.splice(i, 1)
+          handler(event.data)
+        } else {
+          ++i
+        }
+      }
     },
     off(name: string, handler: (data: unknown) => void) {
       event_handlers.set(name, (event_handlers.get(name) ?? []).filter((h) => h !== handler))
     },
     close() {
+      unhandled_events.length = 0
       clearInterval(timer)
       cancelAnimationFrame(frame)
       socket.close()
