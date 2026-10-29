@@ -1,8 +1,21 @@
 @echo off
 cd /d "%~dp0"
-title Seraphim Server
 
 set "RAW=%~1"
+
+:: Check if stop command was requested
+if "%RAW%"=="seraphim://stop" goto :stop
+if "%RAW%"=="seraphim://stop/" goto :stop
+if "%RAW%"=="stop" goto :stop
+
+goto :launch
+
+:stop
+call "%~dp0seraphim-stop.bat"
+exit /b
+
+:launch
+title Seraphim Server
 set "PROJECT_PATH=%RAW:seraphim://=%"
 set "PROJECT_PATH=%PROJECT_PATH:/=\%"
 

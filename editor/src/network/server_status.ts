@@ -9,6 +9,14 @@ export function launch_server(project_name: string): void {
   setTimeout(() => iframe.remove(), 2000)
 }
 
+export function stop_server(): void {
+  const iframe = document.createElement('iframe')
+  iframe.style.display = 'none'
+  iframe.src = 'seraphim://stop'
+  document.body.appendChild(iframe)
+  setTimeout(() => iframe.remove(), 2000)
+}
+
 export function useServerStatus() {
   const [is_running, set_is_running] = useState(false)
 

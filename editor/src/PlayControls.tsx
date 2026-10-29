@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { launch_server, useServerStatus } from './network/server_status'
+import { launch_server, stop_server, useServerStatus } from './network/server_status'
 import { useAssetStore, useScriptStore } from './project/asset_store'
 import { export_project_zip } from './project/export_project'
 import { useProjectStore } from './project/project_store'
@@ -18,9 +18,13 @@ export function PlayControls() {
   const show_colliders = useSettingsStore((store) => store.show_colliders)
   const toggle_setting = useSettingsStore((store) => store.toggle_setting)
 
-  function start_server() {
-    if (project.status !== 'open' || is_running) return
-    launch_server(project.directory.name)
+  function toggle_server() {
+    if (project.status !== 'open') return
+    if (is_running) {
+      stop_server()
+    } else {
+      launch_server(project.directory.name)
+    }
   }
 
   async function export_game() {
@@ -54,11 +58,11 @@ export function PlayControls() {
         type="button"
         className="toolbar-button"
         aria-pressed={is_running}
-        disabled={!ready || is_running}
-        title={is_running ? '' : 'Start Server'}
-        onClick={start_server}
+        disabled={!ready}
+        title={is_running ? 'Stop Server' : 'Start Server'}
+        onClick={toggle_server}
       >
-        {is_running ? 'Server Is Running' : 'Start Server'}
+        {is_running ? 'Stop Server' : 'Start Server'}
       </button>
       <button
         type="button"
