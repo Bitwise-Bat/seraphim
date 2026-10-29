@@ -3,9 +3,12 @@ import { key_codes, mouse_codes } from '../scripting/keys'
 // What "New script" writes: the smallest script the engine will run, with the hooks a script usually fills in first.
 export const script_template = {
   name: 'NewScript.ts',
-  contents: `import { Script } from 'seraphim'
+  contents: `import { Script, field } from 'seraphim'
 
 export default class extends Script {
+  @field
+  speed = 5
+
   on_start(): void {}
 
   on_tick(): void {}
@@ -205,8 +208,27 @@ export const script_types = {
     get text(): string
     set img(src: string)
     get img(): string
-    public remove(): void
+    add_child(elem: ui<any>): void
+    remove_child(elem: ui<any>): void
+    remove(elem?: ui<any>): void
   }
+
+  export type FieldType = 'number' | 'string' | 'boolean' | 'asset' | 'entity'
+
+  export type FieldOptions = {
+    type?: FieldType
+    min?: number
+    max?: number
+    step?: number
+    default?: unknown
+    label?: string
+  }
+
+  export function field(options: FieldOptions): any
+  export function field(target: any, context?: any): any
+
+  export function exported(options: FieldOptions): any
+  export function exported(target: any, context?: any): any
 }
 `,
 }

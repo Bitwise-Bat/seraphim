@@ -20,7 +20,12 @@ type Bundle = Record<string, { path: string; script: unknown }>
 export type ScriptedEntity = {
   id: string
   name: string
-  components: { scripts?: { assets: string[] } }
+  components: {
+    scripts?: {
+      assets: string[]
+      properties?: Record<string, Record<string, unknown>>
+    }
+  }
 }
 
 export type ScriptRun = {
@@ -134,6 +139,10 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
       }
       const object = new (script_class as new () => InstanceType<WorldApi['Script']>)()
       object.entity = new api.Entity(entity.id, entity.name)
+      const props = entity.components.scripts?.properties?.[id]
+      if (props && typeof props === 'object') {
+        Object.assign(object, props)
+      }
       instances.push({ entity_id: entity.id, path: compiled.path, object: object as ScriptObject, failed: false })
     }
   }

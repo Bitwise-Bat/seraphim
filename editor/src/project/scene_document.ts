@@ -91,6 +91,7 @@ export type Networked = Record<string, never>
 // Asset ids of the scripts that drive the entity, run in list order.
 export type Scripts = {
   assets: string[]
+  properties?: Record<string, Record<string, unknown>>
 }
 
 export type Components = {

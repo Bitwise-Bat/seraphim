@@ -274,11 +274,57 @@ export function create_world_api(world: World, tick_seconds: number) {
     time,
     find_entity,
     create_entity,
+    field,
+    exported,
     set_script_attach_handler(handler: AttachScriptHandler) {
       attach_script_handler = handler
     },
   }
 }
+
+export type FieldType = 'number' | 'string' | 'boolean' | 'asset' | 'entity'
+
+export type FieldOptions = {
+  type?: FieldType
+  min?: number
+  max?: number
+  step?: number
+  default?: unknown
+  label?: string
+}
+
+export type FieldMetadata = FieldOptions & {
+  name: string
+}
+
+function register_field(target: any, contextOrKey: any, options: FieldOptions): void {
+  if (typeof contextOrKey === 'object' && contextOrKey !== null && 'kind' in contextOrKey) {
+    const name = String(contextOrKey.name)
+    contextOrKey.addInitializer?.(function (this: any) {
+      const ctor = this.constructor as { __exported_fields?: Record<string, FieldMetadata> }
+      ctor.__exported_fields ??= {}
+      ctor.__exported_fields[name] = { name, ...options }
+    })
+  } else if (typeof contextOrKey === 'string' || typeof contextOrKey === 'symbol') {
+    const name = String(contextOrKey)
+    const ctor = (target?.constructor || target) as { __exported_fields?: Record<string, FieldMetadata> }
+    ctor.__exported_fields ??= {}
+    ctor.__exported_fields[name] = { name, ...options }
+  }
+}
+
+export function field(optionsOrTarget?: FieldOptions | any, maybeContextOrKey?: any): any {
+  if (maybeContextOrKey !== undefined) {
+    register_field(optionsOrTarget, maybeContextOrKey, {})
+    return
+  }
+  const options = (optionsOrTarget as FieldOptions) ?? {}
+  return (target: any, contextOrKey: any) => {
+    register_field(target, contextOrKey, options)
+  }
+}
+
+export const exported = field
 
 export type WorldApi = ReturnType<typeof create_world_api>
 export type Entity = InstanceType<WorldApi['Entity']>

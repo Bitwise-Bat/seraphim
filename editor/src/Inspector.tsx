@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { useAssetFileDrop } from './asset_drag'
 import { find_file_by_id } from './project/assets'
@@ -497,31 +497,297 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
   )
 }
 
+type ScriptFieldDef = {
+  name: string
+  type: 'number' | 'string' | 'boolean' | 'asset' | 'entity'
+  default_value?: unknown
+  min?: number
+  max?: number
+  step?: number
+  label?: string
+}
+
+function parse_script_fields(source: string): ScriptFieldDef[] {
+  const fields: ScriptFieldDef[] = []
+  const regex = /@(?:field|exported)(?:\s*\(([\s\S]*?)\))?\s*(?:readonly\s+)?(?:public\s+|private\s+|protected\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*:\s*([^=;\n]+))?(?:\s*=\s*([^;\n]+))?/g
+
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(source)) !== null) {
+    const raw_options = match[1]?.trim()
+    const name = match[2]
+    const raw_type = match[3]?.trim()
+    const raw_val = match[4]?.trim()
+
+    let options: Record<string, unknown> = {}
+    if (raw_options) {
+      try {
+        options = new Function(`return (${raw_options})`)() as Record<string, unknown>
+      } catch {
+        options = {}
+      }
+    }
+
+    let default_value = options.default
+    if (default_value === undefined && raw_val !== undefined) {
+      try {
+        default_value = new Function(`return (${raw_val})`)()
+      } catch {
+        default_value = raw_val.replace(/^['"`]|['"`]$/g, '')
+      }
+    }
+
+    let type: ScriptFieldDef['type'] = (options.type as ScriptFieldDef['type']) || 'string'
+    if (!options.type) {
+      if (typeof default_value === 'number' || raw_type === 'number') {
+        type = 'number'
+      } else if (typeof default_value === 'boolean' || raw_type === 'boolean') {
+        type = 'boolean'
+      } else if (typeof default_value === 'string' || raw_type === 'string') {
+        type = 'string'
+      } else if (raw_type === 'Entity' || raw_type === 'entity') {
+        type = 'entity'
+      }
+    }
+
+    if (default_value === undefined) {
+      if (type === 'number') default_value = 0
+      else if (type === 'boolean') default_value = false
+      else if (type === 'string') default_value = ''
+      else if (type === 'asset') default_value = ''
+      else if (type === 'entity') default_value = ''
+    }
+
+    fields.push({
+      name,
+      type,
+      default_value,
+      min: typeof options.min === 'number' ? options.min : undefined,
+      max: typeof options.max === 'number' ? options.max : undefined,
+      step: typeof options.step === 'number' ? options.step : undefined,
+      label: typeof options.label === 'string' ? options.label : undefined,
+    })
+  }
+
+  return fields
+}
+
+function render_field_editor(
+  def: ScriptFieldDef,
+  val: unknown,
+  on_change: (value: unknown) => void,
+  all_entities: SceneEntity[],
+) {
+  if (def.type === 'number') {
+    const num = typeof val === 'number' ? val : Number(val) || 0
+    if (def.min !== undefined && def.max !== undefined) {
+      return (
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+          <input
+            type="range"
+            min={def.min}
+            max={def.max}
+            step={def.step ?? (Number.isInteger(def.min) && Number.isInteger(def.max) ? 1 : 0.1)}
+            value={num}
+            onChange={(e) => on_change(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <NumberField
+            label=""
+            value={num}
+            step={def.step ?? 0.1}
+            on_change={(v) => on_change(Math.max(def.min!, Math.min(def.max!, v)))}
+          />
+        </div>
+      )
+    }
+    return (
+      <NumberField
+        label=""
+        value={num}
+        step={def.step ?? 0.1}
+        on_change={on_change}
+      />
+    )
+  }
+
+  if (def.type === 'boolean') {
+    return (
+      <CheckboxField
+        label={def.label ?? def.name}
+        value={Boolean(val)}
+        on_change={on_change}
+      />
+    )
+  }
+
+  if (def.type === 'string') {
+    return (
+      <input
+        className="inspector-name"
+        style={{ width: '100%' }}
+        value={String(val ?? '')}
+        onChange={(e) => on_change(e.target.value)}
+      />
+    )
+  }
+
+  if (def.type === 'asset') {
+    return (
+      <AssetField
+        store={useAssetStore}
+        asset={String(val ?? '')}
+        placeholder="Drop an asset here"
+        on_change={on_change}
+      />
+    )
+  }
+
+  if (def.type === 'entity') {
+    return (
+      <select
+        className="inspector-name"
+        style={{ width: '100%', height: '1.75rem' }}
+        value={String(val ?? '')}
+        onChange={(e) => on_change(e.target.value)}
+      >
+        <option value="">(None)</option>
+        {all_entities.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.name || e.id}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  return null
+}
+
+function ScriptItem({
+  asset,
+  index,
+  value,
+  on_change,
+  all_entities,
+}: {
+  asset: string
+  index: number
+  value: Scripts
+  on_change: (value: Scripts) => void
+  all_entities: SceneEntity[]
+}) {
+  const root = useScriptStore((store) => store.root)
+  const [fields, set_fields] = useState<ScriptFieldDef[]>([])
+
+  useEffect(() => {
+    let active = true
+    const file = root && asset ? find_file_by_id(root, asset) : undefined
+    if (!file) {
+      void Promise.resolve().then(() => {
+        if (active) set_fields([])
+      })
+      return () => {
+        active = false
+      }
+    }
+    file.handle
+      .getFile()
+      .then((f) => f.text())
+      .then((text) => {
+        if (active) {
+          set_fields(parse_script_fields(text))
+        }
+      })
+      .catch(() => {
+        if (active) set_fields([])
+      })
+    return () => {
+      active = false
+    }
+  }, [root, asset])
+
+  const script_props = value.properties?.[asset] ?? {}
+
+  function update_prop(prop_name: string, val: unknown) {
+    const next_props = {
+      ...(value.properties ?? {}),
+      [asset]: {
+        ...(value.properties?.[asset] ?? {}),
+        [prop_name]: val,
+      },
+    }
+    on_change({
+      ...value,
+      properties: next_props,
+    })
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.375rem',
+        padding: '0.375rem',
+        background: 'var(--surface-sunken)',
+        borderRadius: '4px',
+        marginBottom: '0.25rem',
+      }}
+    >
+      <AssetField
+        store={useScriptStore}
+        asset={asset}
+        placeholder="Drop a script here"
+        clear_label="Remove"
+        on_change={(replacement) => {
+          const next_properties = { ...(value.properties ?? {}) }
+          if (!replacement) {
+            delete next_properties[asset]
+          }
+          on_change({
+            assets: replacement
+              ? value.assets.with(index, replacement)
+              : value.assets.filter((_, other) => other !== index),
+            properties: next_properties,
+          })
+        }}
+      />
+      {fields.length > 0 && (
+        <div style={{ marginTop: '0.25rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
+          {fields.map((def) => {
+            const current_val = script_props[def.name] ?? def.default_value
+            return (
+              <Row key={def.name} label={def.label ?? def.name}>
+                {render_field_editor(def, current_val, (new_val) => update_prop(def.name, new_val), all_entities)}
+              </Row>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value: Scripts) => void }) {
+  const all_entities = useSceneStore((store) => store.document?.entities ?? [])
+
   return (
     <div className="inspector-list">
       {value.assets.map((asset, index) => (
-        <AssetField
-          // The same script may be listed twice, so the position tells the rows apart.
-          key={index}
-          store={useScriptStore}
+        <ScriptItem
+          key={`${asset}-${index}`}
           asset={asset}
-          placeholder="Drop a script here"
-          clear_label="Remove"
-          on_change={(replacement) =>
-            on_change({
-              assets: replacement
-                ? value.assets.with(index, replacement)
-                : value.assets.filter((_, other) => other !== index),
-            })
-          }
+          index={index}
+          value={value}
+          on_change={on_change}
+          all_entities={all_entities}
         />
       ))}
       <AssetField
         store={useScriptStore}
         asset=""
         placeholder="Drop a script here to add it"
-        on_change={(added) => on_change({ assets: [...value.assets, added] })}
+        on_change={(added) => on_change({ ...value, assets: [...value.assets, added] })}
       />
     </div>
   )

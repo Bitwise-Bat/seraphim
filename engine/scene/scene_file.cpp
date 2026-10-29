@@ -313,6 +313,8 @@ std::optional<scripts> read_scripts(const json& value)
     scripts out;
     if (!value.is_object() || !read_field(value, "assets", out.assets))
         return std::nullopt;
+    if (value.contains("properties") && value["properties"].is_object())
+        out.properties_json = value["properties"].dump();
     return out;
 }
 
@@ -504,7 +506,16 @@ std::string serialize_scene(const scene& scene)
         if (registry.all_of<networked>(entity))
             components["networked"] = json::object();
         if (const auto* list = registry.try_get<scripts>(entity))
-            components["scripts"] = {{"assets", list->assets}};
+        {
+            json scripts_obj = {{"assets", list->assets}};
+            if (!list->properties_json.empty() && list->properties_json != "{}")
+            {
+                auto parsed = json::parse(list->properties_json, nullptr, false);
+                if (!parsed.is_discarded())
+                    scripts_obj["properties"] = std::move(parsed);
+            }
+            components["scripts"] = std::move(scripts_obj);
+        }
 
         entities.push_back({{"id", id}, {"name", name}, {"components", std::move(components)}});
     }

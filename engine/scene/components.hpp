@@ -156,6 +156,7 @@ struct networked
 struct scripts
 {
     std::vector<std::string> assets;
+    std::string properties_json = "{}";
 };
 
 } // namespace seraphim::scene
