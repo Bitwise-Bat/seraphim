@@ -158,7 +158,23 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       ;(this.element as HTMLImageElement).src = src
     }
 
-    public remove() {
+    add_child(elem: ui<any>) {
+      this.element.appendChild(elem.element)
+    }
+
+    remove_child(elem: ui<any>) {
+      if (elem.element.parentElement === this.element) {
+        this.element.removeChild(elem.element)
+      } else {
+        elem.element.remove()
+      }
+    }
+
+    public remove(elem?: ui<any>) {
+      if (elem) {
+        elem.element.remove()
+        return
+      }
       this.element.remove()
     }
 
