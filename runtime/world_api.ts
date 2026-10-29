@@ -229,6 +229,11 @@ export function create_world_api(world: World, tick_seconds: number) {
   class Script {
     // Assigned by the host right after construction, so it is available from on_start on.
     entity!: Entity
+    on_start?(): void
+    on_tick?(): void
+    on_stop?(): void
+    on_collision_enter?(other: Entity): void
+    on_collision_leave?(other: Entity): void
   }
 
   function log(...values: unknown[]): void {

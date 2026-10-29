@@ -1,10 +1,14 @@
 import { type Entity, running, type World, type WorldApi } from './world_api.ts'
 
 type Hook = 'on_start' | 'on_tick' | 'on_stop'
+type CollisionHook = 'on_collision_enter' | 'on_collision_leave'
+
+type ScriptObject = Partial<Record<Hook, () => void>> & Partial<Record<CollisionHook, (other: Entity) => void>>
 
 type ScriptInstance = {
+  entity_id: string
   path: string
-  object: Partial<Record<Hook, () => void>>
+  object: ScriptObject
   // A script that threw is skipped from then on, so one error does not repeat sixty times a second.
   failed: boolean
 }
@@ -55,6 +59,21 @@ function call(instance: ScriptInstance, hook: Hook): void {
   }
 }
 
+function call_collision(instance: ScriptInstance, hook: CollisionHook, other: Entity): void {
+  if (instance.failed) {
+    return
+  }
+  running.script = instance.path
+  try {
+    instance.object[hook]?.(other)
+  } catch (error) {
+    instance.failed = true
+    console.error(`${instance.path}: ${hook} failed; the script is stopped until the next run`, error)
+  } finally {
+    running.script = ''
+  }
+}
+
 /**
  * Creates one instance per script on every entity, runs on_start and hooks on_tick into the world's fixed tick. The
  * world only ticks while it simulates, so the caller starts the simulation afterwards; on_start therefore runs before
@@ -72,9 +91,34 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
     const object = new script_class()
     object.entity = entity
 
-    const instance: ScriptInstance = { path: compiled.path, object: object as ScriptInstance['object'], failed: false }
+    const instance: ScriptInstance = {
+      entity_id: entity.id,
+      path: compiled.path,
+      object: object as ScriptObject,
+      failed: false,
+    }
     instances.push(instance)
     call(instance, 'on_start')
+  }
+
+  function dispatch_collision(
+    hook: CollisionHook,
+    id_a: string,
+    name_a: string,
+    id_b: string,
+    name_b: string,
+  ): void {
+    let entity_a: Entity | undefined
+    let entity_b: Entity | undefined
+    for (const instance of instances) {
+      if (instance.entity_id === id_a && instance.object[hook]) {
+        entity_b ??= new api.Entity(id_b, name_b)
+        call_collision(instance, hook, entity_b)
+      } else if (instance.entity_id === id_b && instance.object[hook]) {
+        entity_a ??= new api.Entity(id_a, name_a)
+        call_collision(instance, hook, entity_a)
+      }
+    }
   }
 
   for (const entity of entities) {
@@ -90,7 +134,7 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
       }
       const object = new (script_class as new () => InstanceType<WorldApi['Script']>)()
       object.entity = new api.Entity(entity.id, entity.name)
-      instances.push({ path: compiled.path, object: object as ScriptInstance['object'], failed: false })
+      instances.push({ entity_id: entity.id, path: compiled.path, object: object as ScriptObject, failed: false })
     }
   }
 
@@ -105,11 +149,19 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
     }
     api.time.tick += 1
   })
+  world.set_collision_enter_handler((id_a: string, name_a: string, id_b: string, name_b: string) => {
+    dispatch_collision('on_collision_enter', id_a, name_a, id_b, name_b)
+  })
+  world.set_collision_leave_handler((id_a: string, name_a: string, id_b: string, name_b: string) => {
+    dispatch_collision('on_collision_leave', id_a, name_a, id_b, name_b)
+  })
 
   return {
     stop() {
       api.set_script_attach_handler(null)
       world.set_tick_handler(null)
+      world.set_collision_enter_handler(null)
+      world.set_collision_leave_handler(null)
       for (const instance of instances) {
         call(instance, 'on_stop')
       }

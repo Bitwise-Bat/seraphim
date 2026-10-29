@@ -13,6 +13,8 @@ namespace seraphim::scene
 
 world::world(seraphim::scene::scene scene) : scene(std::move(scene))
 {
+    m_dispatcher.sink<collision_enter>().connect<&world::on_collision_enter>(this);
+    m_dispatcher.sink<collision_leave>().connect<&world::on_collision_leave>(this);
     g_world = this;
 }
 
@@ -28,7 +30,30 @@ void world::tick(float seconds)
         return;
     if (!tick_handler.isUndefined() && !tick_handler.isNull())
         tick_handler();
-    physics->step(scene, seconds);
+    physics->step(scene, seconds, m_dispatcher);
+    m_dispatcher.update();
+}
+
+void world::on_collision_enter(const collision_enter& event) const
+{
+    if (collision_enter_handler.isUndefined() || collision_enter_handler.isNull())
+        return;
+    const auto* first = scene.registry().try_get<identity>(event.entity_a);
+    const auto* second = scene.registry().try_get<identity>(event.entity_b);
+    if (!first || !second)
+        return;
+    collision_enter_handler(first->id, first->name, second->id, second->name);
+}
+
+void world::on_collision_leave(const collision_leave& event) const
+{
+    if (collision_leave_handler.isUndefined() || collision_leave_handler.isNull())
+        return;
+    const auto* first = scene.registry().try_get<identity>(event.entity_a);
+    const auto* second = scene.registry().try_get<identity>(event.entity_b);
+    if (!first || !second)
+        return;
+    collision_leave_handler(first->id, first->name, second->id, second->name);
 }
 
 std::optional<std::string> world::find_entity(const std::string& name)

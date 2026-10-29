@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <emscripten/val.h>
+#include <entt/signal/dispatcher.hpp>
 #include <glm/vec2.hpp>
 #include <optional>
 #include <string>
@@ -26,7 +27,11 @@ class world
 
     void start_simulation() { physics.emplace(scene); }
 
-    void stop_simulation() { physics.reset(); }
+    void stop_simulation()
+    {
+        physics.reset();
+        m_dispatcher.clear();
+    }
 
     // Runs the scripts, then the physics, so physics acts on what the scripts changed this tick.
     void tick(float seconds);
@@ -58,8 +63,16 @@ class world
     std::optional<seraphim::scene::physics_system> physics;
     // The script host's function, called once per simulated tick; undefined or null when no scripts run.
     emscripten::val tick_handler = emscripten::val::undefined();
+    emscripten::val collision_enter_handler = emscripten::val::undefined();
+    emscripten::val collision_leave_handler = emscripten::val::undefined();
 
     std::uint32_t local_player_id = invalid_player_id;
+
+  private:
+    void on_collision_enter(const collision_enter& event) const;
+    void on_collision_leave(const collision_leave& event) const;
+
+    entt::dispatcher m_dispatcher;
 };
 
 inline world* g_world{};

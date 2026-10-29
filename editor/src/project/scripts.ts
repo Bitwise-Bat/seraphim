@@ -106,6 +106,10 @@ export const script_types = {
     on_tick?(): void
     // Runs once when Play stops.
     on_stop?(): void
+    // Runs when this entity's collider starts touching or overlapping another collider.
+    on_collision_enter?(other: Entity): void
+    // Runs when this entity's collider stops touching or overlapping another collider.
+    on_collision_leave?(other: Entity): void
   }
 
   // Writes to the browser console, labelled with the calling script.

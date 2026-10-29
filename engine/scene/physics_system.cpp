@@ -9,6 +9,7 @@
 #include <box2d/box2d.h>
 #include <cmath>
 #include <cstdint>
+#include <entt/signal/dispatcher.hpp>
 #include <glm/common.hpp>
 
 namespace seraphim::scene
@@ -57,6 +58,8 @@ void create_shape(b2BodyId body, const collider& shape, glm::vec2 scale)
     def.material.friction = shape.friction;
     def.material.restitution = shape.restitution;
     def.isSensor = shape.sensor;
+    def.enableSensorEvents = true;
+    def.enableContactEvents = true;
 
     const glm::vec2 offset = shape.offset * scale;
     const glm::vec2 extent = glm::abs(scale);
@@ -111,7 +114,7 @@ physics_system::~physics_system()
     b2DestroyWorld(m_world);
 }
 
-void physics_system::step(scene& scene, float seconds)
+void physics_system::step(scene& scene, float seconds, entt::dispatcher& dispatcher)
 {
     b2World_Step(m_world, seconds, sub_steps);
 
@@ -125,6 +128,42 @@ void physics_system::step(scene& scene, float seconds)
             continue;
         placement->position = {move.transform.p.x, move.transform.p.y};
         placement->rotation = b2Rot_GetAngle(move.transform.q);
+    }
+
+    const b2ContactEvents contacts = b2World_GetContactEvents(m_world);
+    for (int i = 0; i < contacts.beginCount; ++i)
+    {
+        const b2ContactBeginTouchEvent& touch = contacts.beginEvents[i];
+        if (!b2Shape_IsValid(touch.shapeIdA) || !b2Shape_IsValid(touch.shapeIdB))
+            continue;
+        dispatcher.enqueue<collision_enter>(from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.shapeIdA))),
+                                            from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.shapeIdB))));
+    }
+    for (int i = 0; i < contacts.endCount; ++i)
+    {
+        const b2ContactEndTouchEvent& touch = contacts.endEvents[i];
+        if (!b2Shape_IsValid(touch.shapeIdA) || !b2Shape_IsValid(touch.shapeIdB))
+            continue;
+        dispatcher.enqueue<collision_leave>(from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.shapeIdA))),
+                                            from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.shapeIdB))));
+    }
+
+    const b2SensorEvents sensors = b2World_GetSensorEvents(m_world);
+    for (int i = 0; i < sensors.beginCount; ++i)
+    {
+        const b2SensorBeginTouchEvent& touch = sensors.beginEvents[i];
+        if (!b2Shape_IsValid(touch.sensorShapeId) || !b2Shape_IsValid(touch.visitorShapeId))
+            continue;
+        dispatcher.enqueue<collision_enter>(from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.sensorShapeId))),
+                                            from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.visitorShapeId))));
+    }
+    for (int i = 0; i < sensors.endCount; ++i)
+    {
+        const b2SensorEndTouchEvent& touch = sensors.endEvents[i];
+        if (!b2Shape_IsValid(touch.sensorShapeId) || !b2Shape_IsValid(touch.visitorShapeId))
+            continue;
+        dispatcher.enqueue<collision_leave>(from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.sensorShapeId))),
+                                            from_user_data(b2Body_GetUserData(b2Shape_GetBody(touch.visitorShapeId))));
     }
 }
 

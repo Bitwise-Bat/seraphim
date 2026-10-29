@@ -30,6 +30,18 @@ struct world_api
             g_world->tick_handler = std::move(handler);
     }
 
+    static void set_collision_enter_handler(emscripten::val handler)
+    {
+        if (g_world)
+            g_world->collision_enter_handler = std::move(handler);
+    }
+
+    static void set_collision_leave_handler(emscripten::val handler)
+    {
+        if (g_world)
+            g_world->collision_leave_handler = std::move(handler);
+    }
+
     // Returns null when the entity does not exist or has no transform.
     static emscripten::val get_transform(const std::string& id)
     {
@@ -388,6 +400,8 @@ EMSCRIPTEN_BINDINGS(world)
     emscripten::class_<world_api>("World")
         .class_function("save_scene", &world_api::save_scene)
         .class_function("set_tick_handler", &world_api::set_tick_handler)
+        .class_function("set_collision_enter_handler", &world_api::set_collision_enter_handler)
+        .class_function("set_collision_leave_handler", &world_api::set_collision_leave_handler)
         .class_function("get_transform", &world_api::get_transform)
         .class_function("set_transform", &world_api::set_transform)
         .class_function("find_entity", &world_api::find_entity)
