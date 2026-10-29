@@ -88,6 +88,16 @@ export function create_world_api(world: World, tick_seconds: number) {
     }
 
     // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
+    get layers(): [number, number] {
+      const fn = (
+        world as unknown as {
+          get_collision_layer?: (id: string) => { category: number; mask: number } | null
+        }
+      ).get_collision_layer
+      const result = fn?.(this.id)
+      return result ? [result.category, result.mask] : [1, 0xffff]
+    }
+
     set layers(layers: [number, number]) {
       world.set_collision_layer(this.id, layers[0], layers[1])
     }

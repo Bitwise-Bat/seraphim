@@ -82,6 +82,8 @@ struct collider
     float restitution = 0.0F;
     // Detects overlaps without colliding.
     bool sensor = false;
+    std::uint32_t category_bits = 1;
+    std::uint32_t mask_bits = 0xFFFF;
 };
 
 // Plays a clip of an animation set by rewriting the sprite's texture region.

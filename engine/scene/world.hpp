@@ -46,6 +46,8 @@ class world
     [[nodiscard]] std::optional<glm::vec2> get_velocity(const std::string& id) const;
     void set_velocity(const std::string& id, glm::vec2 velocity);
     [[nodiscard]] bool has_body(const std::string& id) const;
+    [[nodiscard]] std::optional<std::pair<std::uint32_t, std::uint32_t>> get_layer(const std::string& id) const;
+    void set_layer(const std::string& id, std::uint32_t category, std::uint32_t mask);
 
     [[nodiscard]] std::optional<std::string> get_clip(const std::string& id) const;
     void set_clip(const std::string& id, const std::string& clip);

@@ -207,7 +207,8 @@ std::optional<collider> read_collider(const json& value)
     if (!value.is_object() || !read_field(value, "shape", out.shape) || !read_field(value, "size", out.size) ||
         !read_field(value, "radius", out.radius) || !read_field(value, "offset", out.offset) ||
         !read_field(value, "density", out.density) || !read_field(value, "friction", out.friction) ||
-        !read_field(value, "restitution", out.restitution) || !read_field(value, "sensor", out.sensor))
+        !read_field(value, "restitution", out.restitution) || !read_field(value, "sensor", out.sensor) ||
+        !read_field(value, "category_bits", out.category_bits) || !read_field(value, "mask_bits", out.mask_bits))
         return std::nullopt;
     return out;
 }
@@ -475,6 +476,8 @@ std::string serialize_scene(const scene& scene)
                 {"friction", shape->friction},
                 {"restitution", shape->restitution},
                 {"sensor", shape->sensor},
+                {"category_bits", shape->category_bits},
+                {"mask_bits", shape->mask_bits},
             };
         if (const auto* player = registry.try_get<animator>(entity))
             components["animator"] = {{"animation_set", player->animation_set}, {"clip", player->clip}};

@@ -108,6 +108,32 @@ bool world::has_body(const std::string& id) const
     return entity != entt::null && physics->has_body(entity);
 }
 
+std::optional<std::pair<std::uint32_t, std::uint32_t>> world::get_layer(const std::string& id) const
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return std::nullopt;
+    if (physics)
+        return physics->get_layer(entity);
+    if (const auto* shape = scene.registry().try_get<collider>(entity))
+        return std::pair{shape->category_bits, shape->mask_bits};
+    return std::nullopt;
+}
+
+void world::set_layer(const std::string& id, std::uint32_t category, std::uint32_t mask)
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return;
+    if (auto* shape = scene.registry().try_get<collider>(entity))
+    {
+        shape->category_bits = category;
+        shape->mask_bits = mask;
+    }
+    if (physics)
+        physics->set_layer(entity, category, mask);
+}
+
 std::optional<std::string> world::get_clip(const std::string& id) const
 {
     const auto* player = scene.registry().try_get<animator>(scene.find(id));

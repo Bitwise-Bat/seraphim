@@ -276,6 +276,34 @@ const collider_shapes: { value: ColliderShape; label: string }[] = [
   { value: 'circle', label: 'Circle' },
 ]
 
+type BitmaskFieldProps = {
+  label: string
+  value: number
+  on_change: (value: number) => void
+}
+
+function BitmaskField({ label, value, on_change }: BitmaskFieldProps) {
+  return (
+    <div className="bitmask-grid" role="group" aria-label={label}>
+      {Array.from({ length: 16 }, (_, i) => {
+        const active = (value & (1 << i)) !== 0
+        return (
+          <button
+            key={i}
+            type="button"
+            className="bitmask-button"
+            aria-pressed={active}
+            title={`${label} ${i}: ${active ? 'Enabled' : 'Disabled'}`}
+            onClick={() => on_change(value ^ (1 << i))}
+          >
+            {i}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function ColliderFields({ value, on_change }: { value: Collider; on_change: (value: Collider) => void }) {
   return (
     <>
@@ -314,6 +342,20 @@ function ColliderFields({ value, on_change }: { value: Collider; on_change: (val
           label="e"
           value={value.restitution}
           on_change={(restitution) => on_change({ ...value, restitution })}
+        />
+      </Row>
+      <Row label="Layer">
+        <BitmaskField
+          label="Layer"
+          value={value.category_bits ?? 1}
+          on_change={(category_bits) => on_change({ ...value, category_bits })}
+        />
+      </Row>
+      <Row label="Mask">
+        <BitmaskField
+          label="Mask"
+          value={value.mask_bits ?? 0xffff}
+          on_change={(mask_bits) => on_change({ ...value, mask_bits })}
         />
       </Row>
       <Row label="Sensor">

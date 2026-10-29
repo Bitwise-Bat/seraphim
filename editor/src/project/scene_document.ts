@@ -48,6 +48,8 @@ export type Collider = {
   friction: number
   restitution: number
   sensor: boolean
+  category_bits?: number
+  mask_bits?: number
 }
 
 // Plays a sound while the scene is simulated.
@@ -131,6 +133,8 @@ export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<
     friction: 0.6,
     restitution: 0,
     sensor: false,
+    category_bits: 1,
+    mask_bits: 0xffff,
   }),
   animator: () => ({ animation_set: '', clip: '' }),
   audio_source: () => ({ sound: '', volume: 1, loop: false, play_on_start: false, spatial: false }),

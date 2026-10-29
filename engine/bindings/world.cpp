@@ -367,14 +367,23 @@ struct world_api
         return g_world->physics->get_fixed_rotation(entity);
     }
 
-    static void set_collision_layer(const std::string& id, std::uint8_t category, std::uint8_t mask)
+    static void set_collision_layer(const std::string& id, std::uint32_t category, std::uint32_t mask)
+    {
+        if (g_world)
+            g_world->set_layer(id, category, mask);
+    }
+
+    static emscripten::val get_collision_layer(const std::string& id)
     {
         if (!g_world)
-            return;
-        auto entity = g_world->scene.find(id);
-        if (entity == entt::null)
-            return;
-        g_world->physics->set_layer(entity, category, mask);
+            return emscripten::val::null();
+        const auto layers = g_world->get_layer(id);
+        if (!layers)
+            return emscripten::val::null();
+        auto result = emscripten::val::object();
+        result.set("category", layers->first);
+        result.set("mask", layers->second);
+        return result;
     }
 
     static void attach_script(const std::string& id, const std::string& script_id)
@@ -430,5 +439,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_fixed_rotation", &world_api::set_fixed_rotation)
         .class_function("get_fixed_rotation", &world_api::get_fixed_rotation)
         .class_function("set_collision_layer", &world_api::set_collision_layer)
+        .class_function("get_collision_layer", &world_api::get_collision_layer)
         .class_function("attach_script", &world_api::attach_script);
 }

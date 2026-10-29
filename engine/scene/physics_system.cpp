@@ -60,6 +60,8 @@ void create_shape(b2BodyId body, const collider& shape, glm::vec2 scale)
     def.isSensor = shape.sensor;
     def.enableSensorEvents = true;
     def.enableContactEvents = true;
+    def.filter.categoryBits = shape.category_bits;
+    def.filter.maskBits = shape.mask_bits;
 
     const glm::vec2 offset = shape.offset * scale;
     const glm::vec2 extent = glm::abs(scale);
@@ -244,7 +246,7 @@ bool physics_system::get_fixed_rotation(entt::entity entity)
     return b2Body_IsFixedRotation(body->second);
 }
 
-void physics_system::set_layer(entt::entity entity, std::uint8_t category, std::uint8_t mask)
+void physics_system::set_layer(entt::entity entity, std::uint32_t category, std::uint32_t mask)
 {
     const auto body_it = m_bodies.find(entity);
     if (body_it == m_bodies.end())
@@ -261,5 +263,20 @@ void physics_system::set_layer(entt::entity entity, std::uint8_t category, std::
         filter.maskBits = mask;
         b2Shape_SetFilter(shape_id, filter);
     }
+}
+
+std::optional<std::pair<std::uint32_t, std::uint32_t>> physics_system::get_layer(entt::entity entity) const
+{
+    const auto body_it = m_bodies.find(entity);
+    if (body_it == m_bodies.end())
+        return std::nullopt;
+
+    b2ShapeId shape_id{};
+    const size_t count = b2Body_GetShapes(body_it->second, &shape_id, 1);
+    if (count == 0)
+        return std::nullopt;
+
+    const b2Filter filter = b2Shape_GetFilter(shape_id);
+    return std::pair{static_cast<std::uint32_t>(filter.categoryBits), static_cast<std::uint32_t>(filter.maskBits)};
 }
 } // namespace seraphim::scene
