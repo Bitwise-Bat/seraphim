@@ -139,11 +139,16 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     }
 
     get text() {
+      if(this.tag === 'input')
+        return (this.element as HTMLInputElement).value
       return this.element.textContent
     }
 
     set text(text: string) {
-      this.element.textContent = text
+      if(this.tag === 'input')
+        (this.element as HTMLInputElement).value = text
+      else
+        this.element.textContent = text
     }
 
     get img(): string {
@@ -158,6 +163,28 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       ;(this.element as HTMLImageElement).src = src
     }
 
+    get input_type(): K extends 'input' ? string : undefined {
+      if(this.tag === 'input')
+        return (this.element as HTMLInputElement).type as any 
+      return undefined as any
+    }
+
+    set input_type(value: K extends 'input' ? string : never){
+      if(this.tag === 'input')
+        (this.element as HTMLInputElement).type = value
+    }
+
+    set disabled(value: boolean){
+      if(this.tag === 'input' || this.tag === 'button')
+        (this.element as HTMLInputElement).disabled = value
+    }
+
+    get disabled(){
+      if(this.tag === 'input' || this.tag === 'button') 
+        return (this.element as HTMLInputElement).disabled
+      return false
+    }
+
     add_child(elem: ui<any>) {
       this.element.appendChild(elem.element)
     }
@@ -168,6 +195,14 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       } else {
         elem.element.remove()
       }
+    }
+
+    on(event: string, cb: (data: unknown) => void){
+      this.element.addEventListener(event, cb)
+    }
+
+    off(event: string, cb: (data: unknown) => void){
+      this.element.removeEventListener(event, cb)
     }
 
     public remove(elem?: ui<any>) {

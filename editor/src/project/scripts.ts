@@ -211,6 +211,12 @@ export const script_types = {
     add_child(elem: ui<any>): void
     remove_child(elem: ui<any>): void
     remove(elem?: ui<any>): void
+    set input_type(value: K extends 'input' ? string : never)
+    get input_type(): K extends 'input' ? string : undefined
+    on(event: string, cb: (data: unknown) => void) : void
+    off(event: string, cb: (data: unknown) => void) : void
+    get disabled(): boolean
+    set disabled(value: boolean)
   }
 
   export type FieldType = 'number' | 'string' | 'boolean' | 'asset' | 'entity'

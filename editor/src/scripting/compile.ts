@@ -59,9 +59,9 @@ export async function compile_scripts(root: AssetFolder, scripts: AssetFile[]): 
 
   const files = new Map([...files_in(root)].map((file) => [file.path, file]))
   const entry = [
-    ...scripts.map((file, index) => `import script_${index} from ${JSON.stringify(`./${file.path}`)}`),
+    ...scripts.map((file, index) => `import * as script_${index} from ${JSON.stringify(`./${file.path}`)}`),
     `export default {${scripts
-      .map((file, index) => `${JSON.stringify(file.id)}: { path: ${JSON.stringify(file.path)}, script: script_${index} }`)
+      .map((file, index) => `${JSON.stringify(file.id)}: { path: ${JSON.stringify(file.path)}, script: script_${index}.default }`)
       .join(', ')}}`,
   ].join('\n')
 
