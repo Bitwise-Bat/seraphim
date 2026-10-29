@@ -23,10 +23,41 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason)
 })
 
-const [project_path, watched_name] = process.argv.slice(2)
-if (!project_path) {
+const raw_args = process.argv.slice(2)
+if (raw_args.length === 0) {
   console.error('Usage: npm start -- <project folder> [entity name to log]')
   process.exit(1)
+}
+
+function resolve_project_path(candidate: string): string | undefined {
+  let p = candidate.replace(/^['"]|['"]$/g, '').replace(/^seraphim:\/\//, '').replace(/\/$/, '')
+  try {
+    p = decodeURIComponent(p)
+  } catch {}
+  if (existsSync(p)) return p
+  if (process.env.USERPROFILE) {
+    const doc = join(process.env.USERPROFILE, 'Documents', p)
+    if (existsSync(doc)) return doc
+  }
+  return undefined
+}
+
+let project_path: string | undefined
+let watched_name: string | undefined
+
+for (let i = raw_args.length; i >= 1; i--) {
+  const combined = raw_args.slice(0, i).join(' ')
+  const resolved = resolve_project_path(combined)
+  if (resolved) {
+    project_path = resolved
+    watched_name = raw_args.slice(i).join(' ') || undefined
+    break
+  }
+}
+
+if (!project_path) {
+  project_path = resolve_project_path(raw_args[0]) || raw_args[0]
+  watched_name = raw_args.slice(1).join(' ') || undefined
 }
 
 const scene_path = join(project_path, 'scenes', 'main.scene.json')
