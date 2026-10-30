@@ -32,6 +32,7 @@ export type AssetStore = {
   move: (source_path: string, entry: AssetEntry, target_path: string) => Promise<void>
   remove: (entry: AssetEntry) => Promise<void>
   navigate: (path: string) => void
+  clear: () => void
   // Resolves to null when the entry has no asset id.
   find_id: (entry: AssetEntry, path: string) => Promise<string | null>
 }
@@ -170,6 +171,10 @@ function create_asset_store(folder: string, extensions?: string[]): AssetStoreHo
 
       navigate(path) {
         set({ current_path: path })
+      },
+
+      clear() {
+        set({ root: undefined, current_path: '', error: undefined })
       },
     }
   })

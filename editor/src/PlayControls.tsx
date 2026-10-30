@@ -13,6 +13,7 @@ export function PlayControls() {
   const stop = useSceneStore((store) => store.stop)
   const document = useSceneStore((store) => store.document)
   const project = useProjectStore((store) => store.state)
+  const close = useProjectStore((store) => store.close)
   const { is_running } = useServerStatus()
   const [exporting, set_exporting] = useState(false)
   const show_colliders = useSettingsStore((store) => store.show_colliders)
@@ -25,6 +26,17 @@ export function PlayControls() {
     } else {
       launch_server(project.directory.name)
     }
+  }
+
+  function close_project() {
+    if (project.status !== 'open') return
+    if (useSceneStore.getState().dirty && !window.confirm('You have unsaved changes. Close the project anyway?')) {
+      return
+    }
+    if (is_running) {
+      stop_server()
+    }
+    close()
   }
 
   async function export_game() {
@@ -82,6 +94,14 @@ export function PlayControls() {
         onClick={() => toggle_setting('show_colliders')}
       >
         Colliders
+      </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        title="Close the current project"
+        onClick={close_project}
+      >
+        Close project
       </button>
     </div>
   )

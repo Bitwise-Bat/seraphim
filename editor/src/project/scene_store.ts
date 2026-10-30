@@ -15,6 +15,7 @@ type SceneStore = {
   playing: boolean
   error?: string
   open: (project: FileSystemDirectoryHandle, engine: MainModule) => Promise<void>
+  close: () => void
   save: () => Promise<void>
   // Compiles and starts the scene's scripts first; fails with an error instead of playing when they do not compile.
   play: () => Promise<void>
@@ -150,6 +151,22 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
       engine.Engine.stop_simulation()
       set({ playing: false })
       push_to_engine()
+    },
+
+    close() {
+      if (push_frame !== undefined) {
+        cancelAnimationFrame(push_frame)
+        push_frame = undefined
+      }
+      if (get().playing) {
+        connection?.close()
+        connection = undefined
+        scripts?.stop()
+        scripts = undefined
+        engine?.Engine.stop_simulation()
+      }
+      project = undefined
+      set({ document: undefined, selected: undefined, dirty: false, playing: false, error: undefined })
     },
 
     select(id) {

@@ -1,6 +1,9 @@
 import { create } from 'zustand'
+import { useConsoleStore } from '../console/console_store'
+import { useAssetStore, useScriptStore } from './asset_store'
 import { create_project, read_project, write_script_setup, type ProjectManifest } from './project'
 import { load_recent_project, save_recent_project } from './recent_project'
+import { useSceneStore } from './scene_store'
 
 export type ProjectState =
   | { status: 'unsupported' }
@@ -14,6 +17,7 @@ type ProjectStore = {
   reopen: () => Promise<void>
   open: () => Promise<void>
   create: () => Promise<void>
+  close: () => void
 }
 
 const permission = { mode: 'readwrite' } as const
@@ -86,5 +90,17 @@ export const useProjectStore = create<ProjectStore>()((set, get) => {
 
     open: () => pick_and_load(read_project),
     create: () => pick_and_load(create_project),
+
+    close() {
+      const { state } = get()
+      if (state.status !== 'open') {
+        return
+      }
+      useSceneStore.getState().close()
+      useAssetStore.getState().clear()
+      useScriptStore.getState().clear()
+      useConsoleStore.getState().clear()
+      set({ state: { status: 'closed', recent: state.directory } })
+    },
   }
 })

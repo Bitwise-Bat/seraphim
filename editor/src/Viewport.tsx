@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MainModule } from 'seraphim/seraphim.js'
 import { ColliderOutlines } from './ColliderOutlines'
-import { load_engine } from './engine'
+import { get_engine_canvas, load_engine } from './engine'
 import { Gizmo } from './Gizmo'
 import { Performance } from './Performance'
 import { PlayControls } from './PlayControls'
@@ -15,7 +15,8 @@ import { useViewportDrag } from './viewport_drag'
 import { ViewportOverlay } from './ViewportOverlay'
 
 export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
-  const canvas = useRef<HTMLCanvasElement>(null)
+  const container = useRef<HTMLDivElement>(null)
+  const canvas = useRef<HTMLCanvasElement>(get_engine_canvas())
   const [engine, set_engine] = useState<MainModule>()
   const assets = useAssetStore((store) => store.root)
   const open_scene = useSceneStore((store) => store.open)
@@ -23,10 +24,20 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   const show_colliders = useSettingsStore((store) => store.show_colliders)
 
   useEffect(() => {
-    if (canvas.current) {
-      load_engine(canvas.current)
-        .then(set_engine)
-        .catch((error: unknown) => console.error('Seraphim failed to load', error))
+    const current_canvas = canvas.current
+    const host = container.current
+    if (!current_canvas || !host) {
+      return
+    }
+    host.prepend(current_canvas)
+    load_engine(current_canvas)
+      .then((loaded) => {
+        set_engine(loaded)
+        window.dispatchEvent(new Event('resize'))
+      })
+      .catch((error: unknown) => console.error('Seraphim failed to load', error))
+    return () => {
+      current_canvas.remove()
     }
   }, [])
 
@@ -44,7 +55,10 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
 
   useEffect(() => {
     if (playing) return
-    document.getElementById('seraphim-ui')!.innerHTML = ''
+    const ui_root = document.getElementById('seraphim-ui')
+    if (ui_root) {
+      ui_root.innerHTML = ''
+    }
   }, [playing])
 
   useViewportDrag(canvas, engine)
@@ -62,8 +76,7 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   }, [])
 
   return (
-    <div className="viewport">
-      <canvas ref={canvas} id="seraphim-canvas" tabIndex={0} className="viewport-canvas" />
+    <div ref={container} className="viewport">
       <div className="seraphim-ui" id="seraphim-ui"></div>
       {!playing && show_colliders && <ColliderOutlines canvas_ref={canvas} />}
       {!playing && <Gizmo canvas_ref={canvas} />}
