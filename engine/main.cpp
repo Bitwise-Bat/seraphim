@@ -42,6 +42,9 @@ struct app_state
     // Created once the renderer has a device, since uploading textures needs one.
     std::optional<seraphim::asset::asset_manager> assets;
     seraphim::render::camera2d camera;
+    // Id of the entity the camera sits on. Applied right before drawing, so the camera sees the same position as the
+    // sprite even though networked entities move every frame and not every tick.
+    std::string camera_target;
     seraphim::scene::sprite_system sprites;
     std::optional<seraphim::scene::world> world;
 };
@@ -75,6 +78,7 @@ struct engine_api
 
         // The voices belong to the old scene's entities.
         seraphim::platform::stop_all_voices();
+        g_app->camera_target.clear();
         g_app->world.emplace(std::move(*scene));
         seraphim::scene::g_world = &*g_app->world;
 
@@ -102,6 +106,7 @@ struct engine_api
             return;
         g_app->world->stop_simulation();
         seraphim::platform::stop_all_voices();
+        g_app->camera_target.clear();
     }
 
     // Ticks are fixed, so this is the same for every tick.
@@ -219,6 +224,13 @@ struct engine_api
             camera.view_height = view_height;
     }
 
+    // An empty id stops following.
+    static void follow_camera(std::string id)
+    {
+        if (g_app)
+            g_app->camera_target = std::move(id);
+    }
+
     static bool has_audio_source(const std::string& id)
     {
         if (!g_app)
@@ -294,6 +306,7 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("pick_entity", &engine_api::pick_entity)
         .class_function("get_camera", &engine_api::get_camera)
         .class_function("set_camera", &engine_api::set_camera)
+        .class_function("follow_camera", &engine_api::follow_camera)
         .class_function("was_mouse_pressed", &engine_api::was_mouse_pressed)
         .class_function("was_mouse_released", &engine_api::was_mouse_released)
         .class_function("is_mouse_down", &engine_api::is_mouse_down)
@@ -372,6 +385,13 @@ SDL_AppResult SDL_AppIterate(void* appstate)
         return SDL_APP_CONTINUE;
 
     state.assets->update();
+    if (!state.camera_target.empty())
+    {
+        const auto& scene = state.world->scene;
+        if (const auto* placement =
+                scene.registry().try_get<seraphim::scene::transform>(scene.find(state.camera_target)))
+            state.camera.position = placement->position;
+    }
     state.renderer.begin(state.camera);
     state.sprites.draw(state.world->scene, *state.assets, state.renderer, state.camera);
     state.renderer.end(*state.assets);

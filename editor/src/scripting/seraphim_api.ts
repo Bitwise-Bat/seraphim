@@ -68,6 +68,9 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     screen_to_world(x: number, y: number): { x: number; y: number } {
       return api.screen_to_world(x, y)
     },
+    follow(entity: { id: string } | undefined): void {
+      api.follow_camera(entity?.id ?? '')
+    },
   }
 
   const input = {
