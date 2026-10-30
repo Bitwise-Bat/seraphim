@@ -1,16 +1,13 @@
 import * as esbuild from 'esbuild-wasm'
-import esbuild_wasm_url from 'esbuild-wasm/esbuild.wasm?url'
+import { ensure_esbuild } from '../scripting/compile.ts'
 import keys_source from '../scripting/keys.ts?raw'
 import seraphim_api_source from '../scripting/seraphim_api.ts?raw'
 import script_host_source from '../../../runtime/script_host.ts?raw'
 import world_api_source from '../../../runtime/world_api.ts?raw'
 import player_entry_source from './player_entry.ts?raw'
 
-let initialized: Promise<void> | undefined
-
 export async function build_player_bundle(): Promise<string> {
-  initialized ??= esbuild.initialize({ wasmURL: esbuild_wasm_url })
-  await initialized
+  await ensure_esbuild()
 
   const files: Record<string, string> = {
     '/player_entry.ts': `import create_seraphim from './seraphim.js';\n${player_entry_source}`,

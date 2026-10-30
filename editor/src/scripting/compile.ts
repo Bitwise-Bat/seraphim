@@ -4,6 +4,19 @@ import { files_in, type AssetFile, type AssetFolder } from '../project/assets'
 
 let initialized: Promise<void> | undefined
 
+export function ensure_esbuild(): Promise<void> {
+  initialized ??= esbuild
+    .initialize({ wasmURL: esbuild_wasm_url })
+    .catch((err) => {
+      if (err instanceof Error && err.message.includes('Cannot call "initialize" more than once')) {
+        return
+      }
+      initialized = undefined
+      throw err
+    })
+  return initialized
+}
+
 const entry_path = '<entry>'
 const entry_namespace = 'seraphim-entry'
 const scripts_namespace = 'seraphim-scripts'
@@ -54,8 +67,7 @@ function is_build_failure(error: unknown): error is esbuild.BuildFailure {
  * Throws an Error listing every compile error.
  */
 export async function compile_scripts(root: AssetFolder, scripts: AssetFile[]): Promise<string> {
-  initialized ??= esbuild.initialize({ wasmURL: esbuild_wasm_url })
-  await initialized
+  await ensure_esbuild()
 
   const files = new Map([...files_in(root)].map((file) => [file.path, file]))
   const entry = [
