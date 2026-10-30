@@ -29,8 +29,8 @@ void sprite_system::draw(scene& scene, asset::asset_manager& assets, render::ren
     {
         if (!sprite.handle.valid() && !sprite.texture.empty())
             sprite.handle = assets.load_texture(sprite.texture);
-        
-        if (!sprite.handle.valid() || sprite.layers.empty())
+
+        if (sprite.handle.valid() || sprite.layers.empty())
         {
             m_items.push_back({
                 .order = sprite.order,
@@ -46,33 +46,29 @@ void sprite_system::draw(scene& scene, asset::asset_manager& assets, render::ren
                     },
             });
         }
-        
+
         const float cosine = std::cos(transform.rotation);
         const float sine = std::sin(transform.rotation);
-        
+
         for (std::size_t i = 0; i < sprite.layers.size(); ++i)
         {
             auto& layer = sprite.layers[i];
             if (!layer.handle.valid() && !layer.texture.empty())
                 layer.handle = assets.load_texture(layer.texture);
-            
+
             const glm::vec2 scaled_offset = layer.offset * transform.scale;
             const glm::vec2 rotated_offset{(scaled_offset.x * cosine) - (scaled_offset.y * sine),
-                                            (scaled_offset.x * sine) + (scaled_offset.y * cosine)};
-            
-            m_items.push_back({
-                .order = sprite.order + layer.order,
-                .entity =  entity,
-                .layer_index = i + 1,
-                .sprite = {
-                    .texture = layer.handle,
-                    .position = transform.position + rotated_offset,
-                    .size = sprite.size * transform.scale,
-                    .rotation = transform.rotation,
-                    .uv_rect = sprite.uv_rect,
-                    .color = sprite.color * layer.color
-                }
-            });
+                                           (scaled_offset.x * sine) + (scaled_offset.y * cosine)};
+
+            m_items.push_back({.order = sprite.order + layer.order,
+                               .entity = entity,
+                               .layer_index = i + 1,
+                               .sprite = {.texture = layer.handle,
+                                          .position = transform.position + rotated_offset,
+                                          .size = sprite.size * transform.scale,
+                                          .rotation = transform.rotation,
+                                          .uv_rect = sprite.uv_rect,
+                                          .color = sprite.color * layer.color}});
         }
     }
     const auto tilemaps = registry.view<const transform, tilemap>();
