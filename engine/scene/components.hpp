@@ -32,6 +32,16 @@ struct transform
     float rotation = 0.0F;
     glm::vec2 scale{1.0F};
 };
+    
+struct sprite_layer
+{
+    std::string name;
+    std::string texture;
+    asset::texture_handle handle;
+    glm::vec2 offset{0.0F};
+    glm::vec4 color{1.0F};
+    std::int32_t order = 0;
+};
 
 struct sprite
 {
@@ -46,6 +56,7 @@ struct sprite
     glm::vec4 color{1.0F};
     // Lower orders are drawn first, so higher ones end up on top.
     std::int32_t order = 0;
+    std::vector<sprite_layer> layers;
 };
 
 enum class body_type : std::uint8_t

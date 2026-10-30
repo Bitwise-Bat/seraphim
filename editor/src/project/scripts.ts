@@ -75,6 +75,8 @@ export const script_types = {
   class Sprite {
     private readonly id: string
     set_sprite(sprite: string, order?: number) : void;
+    set_layer(name: String, texture: String, order?:number): void;
+    remove_layer(name: string): void;
   }
 
   export class Entity {

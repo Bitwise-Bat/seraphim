@@ -36,6 +36,7 @@ class sprite_system
     {
         std::int32_t order = 0;
         entt::entity entity = entt::null;
+        std::size_t layer_index = 0;
         bool is_tilemap = false;
         // Unused for tilemaps, which are expanded into one sprite per visible cell when drawn.
         render::sprite sprite;

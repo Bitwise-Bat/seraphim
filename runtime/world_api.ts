@@ -113,6 +113,14 @@ export function create_world_api(world: World, tick_seconds: number) {
     set_sprite(sprite: string, order = 0): void {
       world.set_sprite(this.id, sprite, order)
     }
+    
+    set_layer(name: string, texture: string, order = 0){
+      world.set_sprite_layer(this.id, name, texture, order);
+    }
+    
+    remove_layer(name: string){
+      world.remove_sprite_layer(this.id, name)
+    }
   }
 
   class Tilemap {

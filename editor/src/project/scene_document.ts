@@ -11,6 +11,14 @@ export type Transform = {
   scale: Vec2
 }
 
+export type SpriteLayer = {
+  name: string, 
+  texture: string,
+  offset: Vec2,
+  color: Vec4,
+  order: number
+}
+
 export type Sprite = {
   // Asset id of the texture, or empty for none.
   texture: string
@@ -18,6 +26,7 @@ export type Sprite = {
   uv_rect: Vec4
   color: Vec4
   order: number
+  layers?: SpriteLayer[]
 }
 
 export type BodyType = 'static' | 'kinematic' | 'dynamic'
@@ -123,7 +132,7 @@ export type SceneDocument = {
 
 export const component_defaults: { [Name in ComponentName]-?: () => NonNullable<Components[Name]> } = {
   transform: () => ({ position: [0, 0], rotation: 0, scale: [1, 1] }),
-  sprite: () => ({ texture: '', size: [1, 1], uv_rect: [0, 0, 1, 1], color: [1, 1, 1, 1], order: 0 }),
+  sprite: () => ({ texture: '', size: [1, 1], uv_rect: [0, 0, 1, 1], color: [1, 1, 1, 1], order: 0, layers: [] }),
   rigidbody: () => ({ type: 'dynamic', gravity_scale: 1, fixed_rotation: false }),
   collider: () => ({
     shape: 'box',

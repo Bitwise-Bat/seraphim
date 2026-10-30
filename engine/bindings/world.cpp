@@ -398,6 +398,54 @@ struct world_api
         if (std::ranges::find(scripts.assets, script_id) == scripts.assets.end())
             scripts.assets.push_back(script_id);
     }
+    
+    static void set_sprite_layer(const std::string& id, const std::string& name, const std::string& texture, std::int16_t order = 0)
+    {
+        if (!g_world)
+            return;
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+        
+        auto* sprite_component = g_world->scene.registry().try_get<seraphim::scene::sprite>(entity);
+        if (!sprite_component)
+            return;
+        
+        for (auto& layer : sprite_component->layers)
+        {
+            if (layer.name == name)
+            {
+                if (layer.texture != texture)
+                {
+                    layer.texture = texture;
+                    layer.handle = {};
+                }   
+                layer.order = order;
+                return;
+            }
+        }
+        
+        sprite_component->layers.push_back({
+            .name = name,
+            .texture = texture,
+            .order = order
+        });
+    }
+    
+    static void remove_sprite_layer(const std::string& id, const std::string& name)
+    {
+        if (!g_world)
+            return;
+        const auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+        
+        auto* sprite_component = g_world->scene.registry().try_get<seraphim::scene::sprite>(entity);
+        if (!sprite_component)
+            return;
+        
+        std::erase_if(sprite_component->layers, [&](const seraphim::scene::sprite_layer& layer){ return layer.name == name; });
+    }
 };
 
 } // namespace
@@ -440,5 +488,7 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("get_fixed_rotation", &world_api::get_fixed_rotation)
         .class_function("set_collision_layer", &world_api::set_collision_layer)
         .class_function("get_collision_layer", &world_api::get_collision_layer)
-        .class_function("attach_script", &world_api::attach_script);
+        .class_function("attach_script", &world_api::attach_script)
+        .class_function("set_sprite_layer", &world_api::set_sprite_layer)
+        .class_function("remove_sprite_layer", &world_api::remove_sprite_layer);
 }

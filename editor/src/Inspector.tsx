@@ -5,22 +5,22 @@ import { find_file_by_id } from './project/assets'
 import { is_sound_name } from './project/audio'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import {
-  component_defaults,
-  type Animator,
-  type AudioSource,
-  type BodyType,
-  type Collider,
-  type ColliderShape,
-  type ComponentName,
-  type Components,
-  type Rigidbody,
-  type SceneDocument,
-  type SceneEntity,
-  type Scripts,
-  type Sprite,
-  type Tilemap,
-  type TilemapOrientation,
-  type Transform,
+    component_defaults,
+    type Animator,
+    type AudioSource,
+    type BodyType,
+    type Collider,
+    type ColliderShape,
+    type ComponentName,
+    type Components,
+    type Rigidbody,
+    type SceneDocument,
+    type SceneEntity,
+    type Scripts,
+    type Sprite,
+    type Tilemap,
+    type TilemapOrientation,
+    type Transform, type SpriteLayer,
 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
 import { empty_layer, is_tileset_name, resize_tilemap } from './project/tilemap'
@@ -191,6 +191,15 @@ function AssetField({ store, asset, placeholder, clear_label = 'Clear', accepts,
 
 function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: Sprite) => void }) {
   const [r, g, b, a] = value.color
+    const layers = value.layers || []
+    
+    function update_layer(index: number,  patch: Partial<SpriteLayer>){
+      on_change({
+          ...value,
+          layers: layers.map((layer,  i) => (i === index ? {...layer, ...patch} : layer))
+      })
+    }
+    
   return (
     <>
       <Row label="Texture">
@@ -232,6 +241,76 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
           on_change={(order) => on_change({ ...value, order: Math.round(order) })}
         />
       </Row>
+        <div className="inspector-list">
+            {layers.map((layer,  index) => (
+               <div
+                key={index}
+                style={{
+                    display: "flex",
+                    flexDirection: 'column',
+                    gap: '0.375rem',
+                    padding: '0.375rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: '0.25rem'
+                }}
+               >
+                   <Row label="Slots">
+                       <input
+                        className="inspector-name"
+                        style={{ flex: 1 }}
+                        placeholder="e.g. hand, pants, helmet"
+                        value={layer.name}
+                        onChange={(e) => update_layer(index, { name: e.target.value })}
+                       />
+                       <button 
+                        type="button"
+                        className="toolbar-button"
+                        onClick={() => on_change({ ...value, layers: layers.filter((_, i) => i !== index)})}
+                       >
+                           Remove
+                       </button>
+                   </Row>
+                   <Row label="Texture">
+                       <AssetField 
+                           store={useAssetStore} 
+                           asset={layer.texture} 
+                           placeholder="Drop layer image here" 
+                           on_change={(texture) => update_layer(index,  { texture })} 
+                       />
+                   </Row>
+                   <Row label="Offset">
+                       <VectorFields 
+                            labels={['X', 'Y']}
+                            values={layer.offset}
+                            on_change={(offset) => update_layer(index,  {offset})}
+                       />
+                   </Row>
+                   <Row label="Order +">
+                       <NumberField 
+                           label="#" 
+                           value={layer.order} 
+                           step={1} 
+                           on_change={(order_offset) => update_layer(index,  {order: Math.round(order_offset)})} 
+                       />
+                   </Row>
+               </div>
+            ))}
+        </div>
+            <button
+                type="button"
+                className="toolbar-button"
+                onClick={() =>
+                    on_change({
+                        ...value,
+                        layers: [
+                            ...layers,
+                            { name: `layer_${layers.length + 1}`, texture: '', offset: [0, 0], color: [1, 1, 1, 1], order_offset: 1 },
+                        ],
+                    })
+                }
+            >
+                Add sprite layer
+            </button>
     </>
   )
 }
