@@ -72,11 +72,11 @@ export const script_types = {
     get_cell_center(cell: Vec2): Vec2 | undefined
   }
   
-  class Sprite {
+  export class Sprite {
     private readonly id: string
-    set_sprite(sprite: string, order?: number) : void;
-    set_layer(name: String, texture: String, order?:number): void;
-    remove_layer(name: string): void;
+    set_sprite(sprite: string, order?: number): void
+    set_layer(name: string, texture: string, order?: number): void
+    remove_layer(name: string): void
   }
 
   export class Entity {
@@ -165,11 +165,18 @@ export const script_types = {
 
   export type EventHandler = (player: Player, data: unknown) => void
 
+  export type SpriteLayer = {
+    name: string
+    texture: string
+    order?: number
+  }
+
   export type SpawnOptions = {
     name: string
     owner_id?: number
     position?: [number, number]
     sprite?: string
+    sprite_layers?: SpriteLayer[]
     order?: number
     animation_set?: string
   }
@@ -184,6 +191,8 @@ export const script_types = {
     send(player_id: number, name: string, data?: unknown): void
     broadcast(name: string, data?: unknown): void
     set_clip(id: string, clip: string): void
+    set_sprite_layer(id: string, name: string, texture: string, order?: number): void
+    remove_sprite_layer(id: string, name: string): void
   }
 
   // Only works in the browser.

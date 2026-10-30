@@ -6,12 +6,19 @@ const send_interval_ms = 1000 / 60
 // Matches the server, which sends a snapshot every third 60 Hz tick.
 const snapshot_interval = 3 / 60
 
+type sprite_layer_payload = {
+  name: string
+  texture: string
+  order?: number
+}
+
 type spawned_entity_payload = {
   id: string
   name: string
   owner_id?: number
   position?: [number, number]
   sprite?: string
+  sprite_layers?: sprite_layer_payload[]
   order?: number
   animation_set?: string
 }
@@ -114,13 +121,31 @@ export function connect_to_server(engine: MainModule): ServerConnection {
       if (e.position) {
         engine.World.set_transform(id, e.position[0], e.position[1], 0, 1, 1)
       }
-      if (e.sprite) {
+      if (e.sprite || (e.sprite_layers && e.sprite_layers.length > 0)) {
         engine.World.add_component(id, 'sprite')
-        engine.World.set_sprite(id, e.sprite, e.order ?? 10)
+        engine.World.set_sprite(id, e.sprite ?? '', e.order ?? 10)
+        if (e.sprite_layers) {
+          for (const layer of e.sprite_layers) {
+            engine.World.set_sprite_layer(id, layer.name, layer.texture, layer.order ?? 0)
+          }
+        }
       }
       if (e.animation_set) {
         engine.World.add_component(id, 'animator')
         engine.World.set_animation_set(id, e.animation_set)
+      }
+    } else if (message.type === 'sprite_layer_set' && message.id) {
+      const layer_msg = message as { id: string; name?: string; texture?: string; order?: number }
+      if (typeof layer_msg.name === 'string' && typeof layer_msg.texture === 'string') {
+        if (!engine.World.has_sprite(layer_msg.id)) {
+          engine.World.add_component(layer_msg.id, 'sprite')
+        }
+        engine.World.set_sprite_layer(layer_msg.id, layer_msg.name, layer_msg.texture, layer_msg.order ?? 0)
+      }
+    } else if (message.type === 'sprite_layer_removed' && message.id) {
+      const layer_msg = message as { id: string; name?: string }
+      if (typeof layer_msg.name === 'string') {
+        engine.World.remove_sprite_layer(layer_msg.id, layer_msg.name)
       }
     } else if (message.type === 'despawn_entity' && message.id) {
       interpolations.delete(message.id)

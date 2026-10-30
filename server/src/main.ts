@@ -81,11 +81,18 @@ const { entities } = JSON.parse(scene_text) as { entities: ScriptedEntity[] }
 const players = create_players()
 const events = create_events()
 
+type SpriteLayer = {
+  name: string
+  texture: string
+  order?: number
+}
+
 type SpawnOptions = {
   name: string
   owner_id?: number
   position?: [number, number]
   sprite?: string
+  sprite_layers?: SpriteLayer[]
   order?: number
   animation_set?: string
 }
@@ -93,6 +100,14 @@ type SpawnOptions = {
 type NetworkHandle = ReturnType<typeof start_network>
 let network: NetworkHandle | undefined
 const spawned_entities = new Map<string, SpawnOptions & { id: string }>()
+
+function resolve_entity_id(id_or_name: string): string {
+  if (spawned_entities.has(id_or_name)) return id_or_name
+  for (const [entity_id, data] of spawned_entities) {
+    if (data.name === id_or_name) return entity_id
+  }
+  return engine.World.find_entity(id_or_name) || id_or_name
+}
 
 function broadcast(message: unknown): void {
   if (!network) return
@@ -126,9 +141,19 @@ const server = {
     if (options.position) {
       engine.World.set_transform(id, options.position[0], options.position[1], 0, 1, 1)
     }
-    if (options.sprite) {
+    if (options.sprite || (options.sprite_layers && options.sprite_layers.length > 0)) {
       engine.World.add_component(id, 'sprite')
-      engine.World.set_sprite(id, options.sprite, options.order ?? 10)
+      engine.World.set_sprite(id, options.sprite ?? '', options.order ?? 10)
+      if (options.sprite_layers) {
+        const set_layer = (
+          engine.World as unknown as {
+            set_sprite_layer?: (id: string, name: string, texture: string, order: number) => void
+          }
+        ).set_sprite_layer
+        for (const layer of options.sprite_layers) {
+          set_layer?.(id, layer.name, layer.texture, layer.order ?? 0)
+        }
+      }
     }
     if (options.animation_set) {
       engine.World.add_component(id, 'animator')
@@ -141,6 +166,7 @@ const server = {
       owner_id: options.owner_id,
       position: options.position ?? [0, 0],
       sprite: options.sprite,
+      sprite_layers: options.sprite_layers ? options.sprite_layers.map((l) => ({ ...l })) : undefined,
       order: options.order ?? 10,
       animation_set: options.animation_set,
     }
@@ -150,29 +176,51 @@ const server = {
     return id
   },
   despawn(id_or_name: string): void {
-    let id = id_or_name
-    if (!spawned_entities.has(id)) {
-      for (const [entity_id, data] of spawned_entities) {
-        if (data.name === id_or_name) {
-          id = entity_id
-          break
-        }
-      }
-      if (id === id_or_name) {
-        const found = engine.World.find_entity(id_or_name)
-        if (found) {
-          id = found
-        }
-      }
-    }
+    const id = resolve_entity_id(id_or_name)
     spawned_entities.delete(id)
     engine.World.set_transform(id, -99999, -99999, 0, 0, 0)
     broadcast({ type: 'despawn_entity', id })
   },
-  set_clip(id: string,  clip: string): void {
-    engine.World.set_clip(id,  clip);
-    broadcast({ type: 'anim_clip_changed', clip, id})
-  }
+  set_clip(id: string, clip: string): void {
+    const resolved_id = resolve_entity_id(id)
+    if (engine.World.get_clip(resolved_id) === clip) return
+    engine.World.set_clip(resolved_id, clip)
+    broadcast({ type: 'anim_clip_changed', clip, id: resolved_id })
+  },
+  set_sprite_layer(id: string, name: string, texture: string, order = 0): void {
+    const resolved_id = resolve_entity_id(id)
+    if (!engine.World.has_sprite(resolved_id)) {
+      engine.World.add_component(resolved_id, 'sprite')
+    }
+    const world_any = engine.World as unknown as {
+      set_sprite_layer?: (id: string, name: string, texture: string, order: number) => void
+    }
+    world_any.set_sprite_layer?.(resolved_id, name, texture, order)
+    const spawned = spawned_entities.get(resolved_id)
+    if (spawned) {
+      spawned.sprite_layers ??= []
+      const existing = spawned.sprite_layers.find((l) => l.name === name)
+      if (existing) {
+        existing.texture = texture
+        existing.order = order
+      } else {
+        spawned.sprite_layers.push({ name, texture, order })
+      }
+    }
+    broadcast({ type: 'sprite_layer_set', id: resolved_id, name, texture, order })
+  },
+  remove_sprite_layer(id: string, name: string): void {
+    const resolved_id = resolve_entity_id(id)
+    const world_any = engine.World as unknown as {
+      remove_sprite_layer?: (id: string, name: string) => void
+    }
+    world_any.remove_sprite_layer?.(resolved_id, name)
+    const spawned = spawned_entities.get(resolved_id)
+    if (spawned?.sprite_layers) {
+      spawned.sprite_layers = spawned.sprite_layers.filter((l) => l.name !== name)
+    }
+    broadcast({ type: 'sprite_layer_removed', id: resolved_id, name })
+  },
 }
 
 const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server }
