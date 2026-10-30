@@ -9,15 +9,16 @@ import {
 } from 'react'
 import { AssetBrowserContext, useBrowserStore } from './asset_browser_context'
 import { start_asset_drag, useFolderDrop } from './asset_drag'
-import { AssetThumbnail } from './AssetThumbnail'
+import { AssetThumbnail, is_image_file } from './AssetThumbnail'
 import { AssetTree } from './AssetTree'
 import { ContextMenu, type ContextMenuItem } from './ContextMenu'
-import { find_folder, join_path, type AssetEntry } from './project/assets'
+import { find_folder, join_path, type AssetEntry, type AssetFile } from './project/assets'
 import { useSettingsStore } from './settings_store'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import { script_template } from './project/scripts'
 import { RenameInput } from './RenameInput'
 import { Splitter } from './Splitter'
+import { ImagePreviewDialog } from './ImagePreviewDialog'
 
 const tree_width_limits = { min: 120, max: 480 }
 
@@ -65,9 +66,10 @@ type AssetTileProps = {
   on_context_menu: (event: MouseEvent) => void
   on_rename: (new_name: string) => void
   on_rename_end: () => void
+  on_double_click?: () => void
 }
 
-function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu, on_rename, on_rename_end }: AssetTileProps) {
+function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu, on_rename, on_rename_end, on_double_click }: AssetTileProps) {
   const folder = useBrowserStore((store) => store.folder)
   const current_path = useBrowserStore((store) => store.current_path)
   const drop = useFolderDrop(path)
@@ -98,6 +100,7 @@ function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu,
       onDragStart={(event) => start_asset_drag(event, folder, { source_path: current_path, entry })}
       onClick={on_open}
       onContextMenu={on_context_menu}
+      onDoubleClick={() => on_double_click()}
       {...drop_props}
     >
       {thumbnail}
@@ -152,6 +155,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
+  const [preview_file, set_preview_file] = useState<AssetFile>()
   // Returning focus to where the menu was opened lets keyboard users continue from there.
   const close_menu = useCallback(() => {
     menu?.trigger.focus()
@@ -176,6 +180,8 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
     set_dragging_files(false)
     void import_into_current(dropped_files(event))
   }
+
+  console.log(preview_file)
 
   function open_menu(event: MouseEvent, items: ContextMenuItem[]) {
     event.preventDefault()
@@ -240,71 +246,78 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   }
 
   return (
-    <section
-      className={`asset-browser${dragging_files ? ' asset-browser-dragging' : ''}`}
-      style={{ gridTemplateColumns: `${tree_width}px auto minmax(0, 1fr)` }}
-      aria-label="Assets"
-      onDragOver={on_drag_over}
-      onDragLeave={(event) => {
-        // Moving between child elements also fires dragleave; only leaving the panel itself ends the drag.
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          set_dragging_files(false)
-        }
-      }}
-      onDrop={on_drop}
-    >
-      {tree}
-      <Splitter
-        label="Resize folder tree"
-        orientation="vertical"
-        panel="before"
-        size={tree_width}
-        min={tree_width_limits.min}
-        max={tree_width_limits.max}
-        on_resize={on_tree_resize}
-      />
-      <div
-        className="asset-content"
-        onContextMenu={(event) => open_menu(event, create_actions)}
+    <>
+      {preview_file && <ImagePreviewDialog file={preview_file} on_close={() => set_preview_file(undefined)} />}
+      <section
+        className={`asset-browser${dragging_files ? ' asset-browser-dragging' : ''}`}
+        style={{ gridTemplateColumns: `${tree_width}px auto minmax(0, 1fr)` }}
+        aria-label="Assets"
+        onDragOver={on_drag_over}
+        onDragLeave={(event) => {
+          // Moving between child elements also fires dragleave; only leaving the panel itself ends the drag.
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            set_dragging_files(false)
+          }
+        }}
+        onDrop={on_drop}
       >
-        <div className="asset-toolbar">
-          <nav className="asset-path" aria-label="Asset folder path">
-            <PathSegment label={folder_name} path="" />
-            {segments.map((segment, index) => (
-              <span key={index}>
-                {' / '}
-                <PathSegment label={segment} path={segments.slice(0, index + 1).join('/')} />
-              </span>
-            ))}
-          </nav>
-          <div className="asset-toolbar-actions">
-            {create_actions.map(({ label, action }) => (
-              <button key={label} type="button" className="asset-toolbar-button" onClick={action}>
-                {label}
-              </button>
-            ))}
+        {tree}
+        <Splitter
+          label="Resize folder tree"
+          orientation="vertical"
+          panel="before"
+          size={tree_width}
+          min={tree_width_limits.min}
+          max={tree_width_limits.max}
+          on_resize={on_tree_resize}
+        />
+        <div
+          className="asset-content"
+          onContextMenu={(event) => open_menu(event, create_actions)}
+        >
+          <div className="asset-toolbar">
+            <nav className="asset-path" aria-label="Asset folder path">
+              <PathSegment label={folder_name} path="" />
+              {segments.map((segment, index) => (
+                <span key={index}>
+                  {' / '}
+                  <PathSegment label={segment} path={segments.slice(0, index + 1).join('/')} />
+                </span>
+              ))}
+            </nav>
+            <div className="asset-toolbar-actions">
+              {create_actions.map(({ label, action }) => (
+                <button key={label} type="button" className="asset-toolbar-button" onClick={action}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+          {error && <p role="alert">{error}</p>}
+          {folder && folder.folders.length + folder.files.length === 0 && <p className="asset-hint">{hint}</p>}
+          <ul className="asset-grid">
+            {folder?.folders.map((child) => (
+              <li key={child.path}>
+                <AssetTile
+                  {...tile_props({ kind: 'directory', name: child.name })}
+                  thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
+                  on_open={() => navigate(child.path)}
+                />
+              </li>
+            ))}
+            {folder?.files.map((file) => (
+              <li key={file.id}>
+                <AssetTile
+                  {...tile_props({ kind: 'file', name: file.name })}
+                  thumbnail={<AssetThumbnail file={file} />}
+                  on_double_click={is_image_file(file.name) ? () => set_preview_file(file) : undefined}
+                />
+              </li>
+            ))}
+          </ul>
         </div>
-        {error && <p role="alert">{error}</p>}
-        {folder && folder.folders.length + folder.files.length === 0 && <p className="asset-hint">{hint}</p>}
-        <ul className="asset-grid">
-          {folder?.folders.map((child) => (
-            <li key={child.path}>
-              <AssetTile
-                {...tile_props({ kind: 'directory', name: child.name })}
-                thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
-                on_open={() => navigate(child.path)}
-              />
-            </li>
-          ))}
-          {folder?.files.map((file) => (
-            <li key={file.id}>
-              <AssetTile {...tile_props({ kind: 'file', name: file.name })} thumbnail={<AssetThumbnail file={file} />} />
-            </li>
-          ))}
-        </ul>
-      </div>
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} on_close={close_menu} />}
-    </section>
+        {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} on_close={close_menu} />}
+      </section>
+    </>
   )
 }

@@ -8,6 +8,10 @@ function extension(name: string): string {
   return dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
 }
 
+export function is_image_file(name: string) {
+  return image_extensions.has(extension(name))
+}
+
 export function AssetThumbnail({ file }: { file: AssetFile }) {
   const [url, set_url] = useState<string>()
   const is_image = image_extensions.has(extension(file.name))
