@@ -1026,6 +1026,7 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
 
 function SceneInspector({ document }: { document: SceneDocument }) {
   const set_gravity = useSceneStore((store) => store.set_gravity)
+  const set_clear_color = useSceneStore(store => store.set_clear_color) 
 
   return (
     <section aria-label="Scene">
@@ -1035,6 +1036,9 @@ function SceneInspector({ document }: { document: SceneDocument }) {
       <Row label="Gravity">
         <VectorFields labels={['X', 'Y']} values={document.gravity} on_change={set_gravity} />
       </Row>
+        <Row label="Clear Color">
+            <input type="color" value={document.clear_color} onChange={v => set_clear_color(v.target.value)}/>
+        </Row>
       <p className="panel-hint">Select an entity to edit it.</p>
     </section>
   )

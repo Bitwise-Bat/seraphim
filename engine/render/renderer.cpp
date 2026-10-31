@@ -11,7 +11,7 @@ namespace seraphim::render
 namespace
 {
 
-constexpr wgpu::Color clear_color{0.05, 0.07, 0.10, 1.0};
+wgpu::Color clear_color{0.05, 0.07, 0.10, 1.0};
 
 } // namespace
 
@@ -146,4 +146,14 @@ void renderer::end(const asset::asset_manager& assets)
     m_device.GetQueue().Submit(1, &commands);
 }
 
+void renderer::set_clear_color(const core::color& color)
+{
+    clear_color = {color.r, color.g, color.b, color.a};
+}
+
+core::color renderer::get_clear_color() const
+{
+    return core::color{static_cast<float>(clear_color.r), static_cast<float>(clear_color.g),
+                       static_cast<float>(clear_color.b), static_cast<float>(clear_color.a)};
+}
 } // namespace seraphim::render

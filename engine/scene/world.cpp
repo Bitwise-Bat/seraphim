@@ -134,6 +134,61 @@ void world::set_layer(const std::string& id, std::uint32_t category, std::uint32
         physics->set_layer(entity, category, mask);
 }
 
+void world::set_collider_size(const std::string& id, glm::vec2 size)
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return;
+    auto& shape = scene.registry().get_or_emplace<collider>(entity);
+    shape.size = size;
+    if (shape.shape == collider_shape::circle)
+    {
+        shape.radius = size.x * 0.5F;
+    }
+    if (physics)
+    {
+        const auto* placement = scene.registry().try_get<transform>(entity);
+        const glm::vec2 scale = placement ? placement->scale : glm::vec2{1.0F};
+        physics->set_collider_size(entity, shape, scale);
+    }
+}
+
+std::optional<glm::vec2> world::get_collider_size(const std::string& id) const
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return std::nullopt;
+    if (const auto* shape = scene.registry().try_get<collider>(entity))
+        return shape->size;
+    return std::nullopt;
+}
+
+void world::set_collider_radius(const std::string& id, float radius)
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return;
+    auto& shape = scene.registry().get_or_emplace<collider>(entity);
+    shape.radius = radius;
+    shape.size = {radius * 2.0F, radius * 2.0F};
+    if (physics)
+    {
+        const auto* placement = scene.registry().try_get<transform>(entity);
+        const glm::vec2 scale = placement ? placement->scale : glm::vec2{1.0F};
+        physics->set_collider_size(entity, shape, scale);
+    }
+}
+
+std::optional<float> world::get_collider_radius(const std::string& id) const
+{
+    const entt::entity entity = scene.find(id);
+    if (entity == entt::null)
+        return std::nullopt;
+    if (const auto* shape = scene.registry().try_get<collider>(entity))
+        return shape->radius;
+    return std::nullopt;
+}
+
 std::optional<std::string> world::get_clip(const std::string& id) const
 {
     const auto* player = scene.registry().try_get<animator>(scene.find(id));

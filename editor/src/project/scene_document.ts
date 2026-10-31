@@ -127,6 +127,7 @@ export type SceneDocument = {
   format_version: number
   // In meters per second squared.
   gravity: Vec2
+  clear_color: string
   entities: SceneEntity[]
 }
 

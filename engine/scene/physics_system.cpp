@@ -279,4 +279,38 @@ std::optional<std::pair<std::uint32_t, std::uint32_t>> physics_system::get_layer
     const b2Filter filter = b2Shape_GetFilter(shape_id);
     return std::pair{static_cast<std::uint32_t>(filter.categoryBits), static_cast<std::uint32_t>(filter.maskBits)};
 }
+
+void physics_system::set_collider_size(entt::entity entity, const collider& shape, glm::vec2 scale)
+{
+    const auto body_it = m_bodies.find(entity);
+    if (body_it == m_bodies.end())
+        return;
+
+    const b2BodyId body_id = body_it->second;
+
+    b2ShapeId shape_id{};
+    const size_t count = b2Body_GetShapes(body_id, &shape_id, 1);
+    if (count == 0)
+    {
+        create_shape(body_id, shape, scale);
+        return;
+    }
+
+    const glm::vec2 offset = shape.offset * scale;
+    const glm::vec2 extent = glm::abs(scale);
+
+    if (shape.shape == collider_shape::box)
+    {
+        const glm::vec2 half = shape.size * extent * 0.5F;
+        const b2Polygon box =
+            b2MakeOffsetBox(std::max(half.x, 0.001F), std::max(half.y, 0.001F), to_b2(offset), b2Rot_identity);
+        b2Shape_SetPolygon(shape_id, &box);
+    }
+    else
+    {
+        const b2Circle circle{to_b2(offset), std::max(shape.radius * std::max(extent.x, extent.y), 0.001F)};
+        b2Shape_SetCircle(shape_id, &circle);
+    }
+    b2Body_ApplyMassFromShapes(body_id);
+}
 } // namespace seraphim::scene

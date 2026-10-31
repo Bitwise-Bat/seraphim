@@ -81,6 +81,7 @@ struct engine_api
         g_app->camera_target.clear();
         g_app->world.emplace(std::move(*scene));
         seraphim::scene::g_world = &*g_app->world;
+        g_app->renderer.set_clear_color(seraphim::core::color::from_hex(scene->clear_color().to_hex()));
 
         if (g_app->assets)
         {
@@ -283,6 +284,22 @@ struct engine_api
         if (auto* source = scene.registry().try_get<seraphim::scene::audio_source>(scene.find(id)))
             seraphim::scene::audio_system::set_volume(*source, volume);
     }
+    
+    static void set_clear_color(const std::string& hex_color)
+    {
+        if (!g_app)
+            return;
+        const auto color = seraphim::core::color::from_hex(hex_color);
+        g_app->renderer.set_clear_color(color);
+    }
+    
+    static std::optional<std::string> get_clear_color()
+    {
+        if (!g_app) 
+            return std::nullopt;
+        const auto color = g_app->renderer.get_clear_color();
+        return color.to_hex();
+    }
 
   private:
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
@@ -316,7 +333,9 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("stop_audio", &engine_api::stop_audio)
         .class_function("is_audio_playing", &engine_api::is_audio_playing)
         .class_function("get_audio_volume", &engine_api::get_audio_volume)
-        .class_function("set_audio_volume", &engine_api::set_audio_volume);
+        .class_function("set_audio_volume", &engine_api::set_audio_volume)
+        .class_function("set_clear_color", &engine_api::set_clear_color)
+        .class_function("get_clear_color", &engine_api::get_clear_color);
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int, char*[])

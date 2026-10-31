@@ -214,6 +214,12 @@ struct world_api
             static_cast<void>(registry.get_or_emplace<seraphim::scene::collider>(entity));
             g_world->physics->create_body(entity, g_world->scene);
         }
+        else if (component == "collider")
+        {
+            static_cast<void>(registry.get_or_emplace<seraphim::scene::collider>(entity));
+            if (g_world->physics)
+                g_world->physics->create_body(entity, g_world->scene);
+        }
         else if (component == "sprite")
         {
             static_cast<void>(registry.get_or_emplace<seraphim::scene::sprite>(entity));
@@ -398,19 +404,20 @@ struct world_api
         if (std::ranges::find(scripts.assets, script_id) == scripts.assets.end())
             scripts.assets.push_back(script_id);
     }
-    
-    static void set_sprite_layer(const std::string& id, const std::string& name, const std::string& texture, std::int16_t order = 0)
+
+    static void set_sprite_layer(const std::string& id, const std::string& name, const std::string& texture,
+                                 std::int16_t order = 0)
     {
         if (!g_world)
             return;
         const auto entity = g_world->scene.find(id);
         if (entity == entt::null)
             return;
-        
+
         auto* sprite_component = g_world->scene.registry().try_get<seraphim::scene::sprite>(entity);
         if (!sprite_component)
             return;
-        
+
         for (auto& layer : sprite_component->layers)
         {
             if (layer.name == name)
@@ -419,19 +426,15 @@ struct world_api
                 {
                     layer.texture = texture;
                     layer.handle = {};
-                }   
+                }
                 layer.order = order;
                 return;
             }
         }
-        
-        sprite_component->layers.push_back({
-            .name = name,
-            .texture = texture,
-            .order = order
-        });
+
+        sprite_component->layers.push_back({.name = name, .texture = texture, .order = order});
     }
-    
+
     static void remove_sprite_layer(const std::string& id, const std::string& name)
     {
         if (!g_world)
@@ -439,12 +442,93 @@ struct world_api
         const auto entity = g_world->scene.find(id);
         if (entity == entt::null)
             return;
-        
+
         auto* sprite_component = g_world->scene.registry().try_get<seraphim::scene::sprite>(entity);
         if (!sprite_component)
             return;
-        
-        std::erase_if(sprite_component->layers, [&](const seraphim::scene::sprite_layer& layer){ return layer.name == name; });
+
+        std::erase_if(sprite_component->layers,
+                      [&](const seraphim::scene::sprite_layer& layer) { return layer.name == name; });
+    }
+
+    static void set_collider_offset(const std::string& id, float offset_x, float offset_y)
+    {
+        if (!g_world)
+            return;
+        auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return;
+
+        auto* collider = g_world->scene.registry().try_get<seraphim::scene::collider>(entity);
+        if (!collider)
+            return;
+
+        collider->offset = {offset_x, offset_y};
+        if (g_world->physics)
+        {
+            const auto* placement = g_world->scene.registry().try_get<seraphim::scene::transform>(entity);
+            const glm::vec2 scale = placement ? placement->scale : glm::vec2{1.0F};
+            g_world->physics->set_collider_size(entity, *collider, scale);
+        }
+    }
+
+    static void set_collider_size(const std::string& id, float width, float height)
+    {
+        if (g_world)
+            g_world->set_collider_size(id, glm::vec2{width, height});
+    }
+
+    static emscripten::val get_collider_size(const std::string& id)
+    {
+        const auto null = emscripten::val::null();
+        if (!g_world)
+            return null;
+        const auto size = g_world->get_collider_size(id);
+        if (!size)
+            return null;
+
+        auto result = emscripten::val::object();
+        result.set("x", size->x);
+        result.set("y", size->y);
+        return result;
+    }
+
+    static void set_collider_radius(const std::string& id, float radius)
+    {
+        if (g_world)
+            g_world->set_collider_radius(id, radius);
+    }
+
+    static emscripten::val get_collider_radius(const std::string& id)
+    {
+        const auto null = emscripten::val::null();
+        if (!g_world)
+            return null;
+        const auto radius = g_world->get_collider_radius(id);
+        if (!radius)
+            return null;
+        return emscripten::val(*radius);
+    }
+
+    static emscripten::val get_collider_offset(const std::string& id)
+    {
+        const auto null = emscripten::val::null();
+
+        if (!g_world)
+            return null;
+        auto entity = g_world->scene.find(id);
+        if (entity == entt::null)
+            return null;
+
+        auto* collider = g_world->scene.registry().try_get<seraphim::scene::collider>(entity);
+        if (!collider)
+            return null;
+
+        auto offset = emscripten::val::object();
+        offset.set("x", collider->offset.x);
+        offset.set("y", collider->offset.y);
+
+        return offset;
     }
 };
 
@@ -490,5 +574,11 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("get_collision_layer", &world_api::get_collision_layer)
         .class_function("attach_script", &world_api::attach_script)
         .class_function("set_sprite_layer", &world_api::set_sprite_layer)
-        .class_function("remove_sprite_layer", &world_api::remove_sprite_layer);
+        .class_function("remove_sprite_layer", &world_api::remove_sprite_layer)
+        .class_function("get_collider_offset", &world_api::get_collider_offset)
+        .class_function("set_collider_offset", &world_api::set_collider_offset)
+        .class_function("set_collider_size", &world_api::set_collider_size)
+        .class_function("get_collider_size", &world_api::get_collider_size)
+        .class_function("set_collider_radius", &world_api::set_collider_radius)
+        .class_function("get_collider_radius", &world_api::get_collider_radius);
 }

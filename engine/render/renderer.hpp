@@ -9,6 +9,8 @@
 #include <optional>
 #include <webgpu/webgpu_cpp.h>
 
+#include "core/color.hpp"
+
 namespace seraphim::asset
 {
 class asset_manager;
@@ -35,6 +37,9 @@ class renderer
     void draw(const sprite& item);
     // Clears the canvas and draws everything submitted since begin().
     void end(const asset::asset_manager& assets);
+  
+    void set_clear_color(const core::color& color);
+    [[nodiscard]] core::color get_clear_color() const;
 
     // Null until the browser has granted a device.
     [[nodiscard]] const wgpu::Device& device() const { return m_device; }

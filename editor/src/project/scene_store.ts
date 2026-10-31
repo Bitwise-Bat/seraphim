@@ -26,6 +26,7 @@ type SceneStore = {
   remove_entity: (id: string) => void
   update_entity: (id: string, change: (entity: SceneEntity) => SceneEntity) => void
   set_gravity: (gravity: Vec2) => void
+  set_clear_color: (color: string) => void
 }
 
 function error_message(error: unknown): string {
@@ -198,5 +199,14 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         change({ ...document, gravity })
       }
     },
+    
+    set_clear_color(color){
+      const { document } = get()
+      if (document) {
+        change({...document, clear_color: color})
+        if (engine)
+          engine.Engine.set_clear_color(color)
+      }
+    }
   }
 })

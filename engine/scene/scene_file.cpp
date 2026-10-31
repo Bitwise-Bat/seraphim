@@ -72,6 +72,17 @@ namespace seraphim::scene
             return true;
         }
 
+        bool read(const json& value, core::color& out)
+        {
+            if (!value.is_string())
+                return false;
+            const auto parsed = core::color::try_from_hex(value.get_ref<const std::string&>());
+            if (!parsed)
+                return false;
+            out = *parsed;
+            return true;
+        }
+
         bool read(const json& value, std::vector<std::string>& out)
         {
             if (!value.is_array())
@@ -452,6 +463,8 @@ namespace seraphim::scene
         scene out;
         if (!read_field(root, "gravity", out.gravity()))
             return std::unexpected("The scene has an invalid gravity");
+        if (!read_field(root, "clear_color", out.clear_color()))
+            return std::unexpected("The scene has an invalid clear color");
         for (const json& entity : *entities)
             if (auto added = read_entity(out, entity); !added)
                 return std::unexpected(std::move(added.error()));
@@ -557,6 +570,7 @@ namespace seraphim::scene
             {"format_version", format_version},
             {"gravity", write(scene.gravity())},
             {"entities", std::move(entities)},
+            {"clear_color", scene.clear_color().to_hex()}
         };
         return root.dump(2) + '\n';
     }

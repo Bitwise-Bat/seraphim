@@ -42,6 +42,14 @@ export const script_types = {
     // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
     get layers(): [number, number]
     set layers(layers: [number, number])
+    get offset(): Vec2
+    set offset(offset: Vec2)
+    get size(): Vec2
+    set size(size: Vec2)
+    get collider_size(): Vec2
+    set collider_size(size: Vec2)
+    get radius(): number
+    set radius(radius: number)
   }
 
   export class Animator {
@@ -97,6 +105,9 @@ export const script_types = {
     get tilemap(): Tilemap | undefined
     get audio(): AudioSource | undefined
     get sprite(): Sprite | undefined
+    set offset(offset: Vec2)
+    get offset(): Vec2
+
     
     is_local(): boolean
     add_component(component_name: string): void

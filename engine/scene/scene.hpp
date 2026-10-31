@@ -5,6 +5,8 @@
 #include <string>
 #include <string_view>
 
+#include "core/color.hpp"
+
 namespace seraphim::scene
 {
 
@@ -24,9 +26,13 @@ class scene
     [[nodiscard]] glm::vec2& gravity() { return m_gravity; }
     [[nodiscard]] const glm::vec2& gravity() const { return m_gravity; }
 
+    [[nodiscard]] core::color& clear_color() { return m_clear_color; }
+    [[nodiscard]] const core::color& clear_color() const { return m_clear_color; }
+  
   private:
     entt::registry m_registry;
     glm::vec2 m_gravity{0.0F};
+    core::color m_clear_color = core::color::black;
 };
 
 } // namespace seraphim::scene

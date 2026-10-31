@@ -101,6 +101,61 @@ export function create_world_api(world: World, tick_seconds: number) {
     set layers(layers: [number, number]) {
       world.set_collision_layer(this.id, layers[0], layers[1])
     }
+    
+    set offset(offset: Vec2) {
+      world.set_collider_offset(this.id, offset[0], offset[1])
+    }
+    
+    get offset() : Vec2 {
+      const offset = world.get_collider_offset(this.id)
+      return offset ? [offset.x, offset.y] : [0, 0]
+    }
+
+    get size(): Vec2 {
+      const fn = (
+        world as unknown as {
+          get_collider_size?: (id: string) => { x: number; y: number } | null
+        }
+      ).get_collider_size
+      const result = fn?.(this.id)
+      return result ? [result.x, result.y] : [1, 1]
+    }
+
+    set size(size: Vec2) {
+      const fn = (
+        world as unknown as {
+          set_collider_size?: (id: string, width: number, height: number) => void
+        }
+      ).set_collider_size
+      fn?.(this.id, size[0], size[1])
+    }
+
+    get collider_size(): Vec2 {
+      return this.size
+    }
+
+    set collider_size(size: Vec2) {
+      this.size = size
+    }
+
+    get radius(): number {
+      const fn = (
+        world as unknown as {
+          get_collider_radius?: (id: string) => number | null
+        }
+      ).get_collider_radius
+      const result = fn?.(this.id)
+      return typeof result === 'number' ? result : 0.5
+    }
+
+    set radius(radius: number) {
+      const fn = (
+        world as unknown as {
+          set_collider_radius?: (id: string, radius: number) => void
+        }
+      ).set_collider_radius
+      fn?.(this.id, radius)
+    }
   }
 
   class Sprite {

@@ -48,6 +48,10 @@ class world
     [[nodiscard]] bool has_body(const std::string& id) const;
     [[nodiscard]] std::optional<std::pair<std::uint32_t, std::uint32_t>> get_layer(const std::string& id) const;
     void set_layer(const std::string& id, std::uint32_t category, std::uint32_t mask);
+    void set_collider_size(const std::string& id, glm::vec2 size);
+    [[nodiscard]] std::optional<glm::vec2> get_collider_size(const std::string& id) const;
+    void set_collider_radius(const std::string& id, float radius);
+    [[nodiscard]] std::optional<float> get_collider_radius(const std::string& id) const;
 
     [[nodiscard]] std::optional<std::string> get_clip(const std::string& id) const;
     void set_clip(const std::string& id, const std::string& clip);

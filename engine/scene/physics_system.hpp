@@ -50,6 +50,7 @@ class physics_system
     [[nodiscard]] bool get_fixed_rotation(entt::entity entity);
     void set_layer(entt::entity entity, std::uint32_t category, std::uint32_t mask);
     [[nodiscard]] std::optional<std::pair<std::uint32_t, std::uint32_t>> get_layer(entt::entity entity) const;
+    void set_collider_size(entt::entity entity, const struct collider& shape, glm::vec2 scale);
 
   private:
     b2WorldId m_world;
