@@ -7,6 +7,7 @@ import { create_world_api } from '../../runtime/world_api.ts'
 import { start_network } from './network.js'
 import { create_events } from './events.js'
 import { create_players } from './players.js'
+import { db } from './db.ts'
 
 const port = 9001
 const tick_rate = 60
@@ -223,7 +224,7 @@ const server = {
   },
 }
 
-const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server }
+const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server, db }
 run_scripts(engine.World, api, code, entities)
 
 engine.Server.start_simulation()

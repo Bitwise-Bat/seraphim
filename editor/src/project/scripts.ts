@@ -207,6 +207,11 @@ export const script_types = {
     set_sprite_layer(id: string, name: string, texture: string, order?: number): void
     remove_sprite_layer(id: string, name: string): void
   }
+  
+  export const db: {
+    query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>
+    execute(sql: string, params?: unknown[]): Promise<unknown>
+  }
 
   // Only works in the browser.
   export const net: {

@@ -10,10 +10,11 @@
   "author": "Szepesi Daniel",
   "license": "ISC",
   "dependencies": {
+    "mysql2": "^3.24.6",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.71.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
