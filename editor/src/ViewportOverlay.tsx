@@ -47,7 +47,10 @@ export function ViewportOverlay({ canvas_ref }: { canvas_ref: RefObject<HTMLCanv
   const world = cursor && { x: position.x + cursor.x * units_per_pixel, y: position.y + cursor.y * units_per_pixel }
 
   return (
-    <output className="viewport-overlay" aria-label="Camera">
+    <output
+      className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/60 font-mono text-xs pointer-events-none"
+      aria-label="Camera"
+    >
       x {position.x.toFixed(2)} y {position.y.toFixed(2)} height {view_height.toFixed(2)}
       {world && ` | cursor ${world.x.toFixed(2)}, ${world.y.toFixed(2)}`}
     </output>

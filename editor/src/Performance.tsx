@@ -52,12 +52,13 @@ export function Performance() {
     .map((option) => format_metric(option.value, frame_time))
 
   return (
-    <div className="performance">
+    <div className="absolute top-2 right-2 flex gap-2 items-center px-1.5 py-0.5 rounded bg-black/60 font-mono text-xs z-10">
       {shown.length > 0 && <output aria-label="Performance">{shown.join(' | ')}</output>}
       {metrics.map((option) => (
-        <label key={option.value} className="performance-option">
+        <label key={option.value} className="flex gap-1 items-center cursor-pointer select-none">
           <input
             type="checkbox"
+            className="m-0 accent-accent cursor-pointer"
             checked={option.key === 'show_fps' ? show_fps : show_frame_time}
             onChange={() => toggle_setting(option.key)}
           />

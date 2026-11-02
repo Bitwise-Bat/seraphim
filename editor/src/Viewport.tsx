@@ -76,8 +76,8 @@ export function Viewport({ project }: { project: FileSystemDirectoryHandle }) {
   }, [])
 
   return (
-    <div ref={container} className="viewport">
-      <div className="seraphim-ui" id="seraphim-ui"></div>
+    <div ref={container} className="relative min-w-0 min-h-0">
+      <div className="absolute pointer-events-none top-0 left-0 w-full h-full" id="seraphim-ui"></div>
       {!playing && show_colliders && <ColliderOutlines canvas_ref={canvas} />}
       {!playing && <Gizmo canvas_ref={canvas} />}
       <Performance />

@@ -37,7 +37,7 @@ export function AssetThumbnail({ file }: { file: AssetFile }) {
   }, [file.handle, is_image])
 
   if (url) {
-    return <img className="asset-thumbnail" src={url} alt="" draggable={false} />
+    return <img className="w-16 h-16 object-contain [image-rendering:pixelated]" src={url} alt="" draggable={false} />
   }
-  return <span className="asset-thumbnail asset-thumbnail-label">{extension(file.name) || 'file'}</span>
+  return <span className="w-16 h-16 grid place-items-center rounded bg-control text-text-muted text-xs uppercase">{extension(file.name) || 'file'}</span>
 }

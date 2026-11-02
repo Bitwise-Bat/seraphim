@@ -116,18 +116,18 @@ export function TilePalette({ tileset }: { tileset: string }) {
   }, [root, tileset_file])
 
   if (!tileset) {
-    return <p className="panel-hint">Drop a tileset to paint with it.</p>
+    return <p className="text-text-muted text-sm">Drop a tileset to paint with it.</p>
   }
   if (!tileset_file) {
-    return <p className="panel-hint">Missing tileset {tileset}</p>
+    return <p className="text-text-muted text-sm">Missing tileset {tileset}</p>
   }
   // Fields set before the drop check existed, or edited by hand, can still point at another kind of file.
   if (!is_tileset_name(tileset_file.name)) {
-    return <p className="panel-hint">{tileset_file.name} is not a tileset; drop a .tileset.json file instead.</p>
+    return <p className="text-text-muted text-sm">{tileset_file.name} is not a tileset; drop a .tileset.json file instead.</p>
   }
   const loaded = result?.source === tileset_file ? result : undefined
   if (loaded?.problem) {
-    return <p className="panel-hint">{loaded.problem}</p>
+    return <p className="text-text-muted text-sm">{loaded.problem}</p>
   }
   if (!loaded?.file || !loaded.url) {
     return null
@@ -248,13 +248,17 @@ export function TilePalette({ tileset }: { tileset: string }) {
         })
     : []
 
+  const btn_class =
+    'px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit'
+
   return (
     <>
-      <div className="tile-palette">
+      <div className="relative mt-2 max-h-80 leading-none overflow-auto">
         <img
           src={url}
           alt="Tileset"
           draggable={false}
+          className="cursor-crosshair [image-rendering:pixelated] block max-w-none"
           onLoad={(event) =>
             set_image({ url, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })
           }
@@ -268,20 +272,20 @@ export function TilePalette({ tileset }: { tileset: string }) {
           }}
         />
         {selection.map(({ key, style }) => (
-          <div key={key} className="tile-palette-selection" style={style} />
+          <div key={key} className="absolute box-border border-2 border-accent pointer-events-none" style={style} />
         ))}
       </div>
-      <div className="tile-palette-controls">
+      <div className="flex gap-1.5 mt-1.5">
         <button
           type="button"
-          className="toolbar-button"
+          className={btn_class}
           onClick={() => set_palette_zoom(Math.min(16, palette_zoom * 2))}
         >
           +
         </button>
         <button
           type="button"
-          className="toolbar-button"
+          className={btn_class}
           onClick={() => set_palette_zoom(Math.max(0.25, palette_zoom / 2))}
         >
           -

@@ -54,11 +54,14 @@ export function PlayControls() {
     }
   }
 
+  const btn_class =
+    'px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit disabled:opacity-50 disabled:cursor-not-allowed aria-pressed:border-accent aria-pressed:text-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2'
+
   return (
-    <div className="play-controls" role="toolbar" aria-label="Simulation">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1 z-10" role="toolbar" aria-label="Simulation">
       <button
         type="button"
-        className="toolbar-button"
+        className={btn_class}
         aria-pressed={playing}
         disabled={!ready}
         title={playing ? 'Stop and restore the scene' : 'Simulate the scene; edits are paused until stopped'}
@@ -68,7 +71,7 @@ export function PlayControls() {
       </button>
       <button
         type="button"
-        className="toolbar-button"
+        className={btn_class}
         aria-pressed={is_running}
         disabled={!ready}
         title={is_running ? 'Stop Server' : 'Start Server'}
@@ -78,7 +81,7 @@ export function PlayControls() {
       </button>
       <button
         type="button"
-        className="toolbar-button"
+        className={btn_class}
         disabled={!ready || playing || exporting}
         title="Export project to standalone Web bundle (.zip)"
         onClick={export_game}
@@ -87,7 +90,7 @@ export function PlayControls() {
       </button>
       <button
         type="button"
-        className="toolbar-button"
+        className={btn_class}
         aria-pressed={show_colliders}
         disabled={!ready || playing}
         title="Toggle collider outlines"
@@ -97,7 +100,7 @@ export function PlayControls() {
       </button>
       <button
         type="button"
-        className="toolbar-button"
+        className={btn_class}
         title="Close the current project"
         onClick={close_project}
       >

@@ -47,9 +47,9 @@ export function Workspace({ project }: { project: FileSystemDirectoryHandle }) {
   }, [save])
 
   return (
-    <div className="workspace" style={{ gridTemplateRows: `minmax(0, 1fr) auto ${dock_height}px` }}>
+    <div className="grid grid-cols-[minmax(0,1fr)] min-h-0" style={{ gridTemplateRows: `minmax(0, 1fr) auto ${dock_height}px` }}>
       <div
-        className="workspace-main"
+        className="grid grid-rows-[minmax(0,1fr)] min-h-0"
         style={{ gridTemplateColumns: `${scene_panel_width}px auto minmax(0, 1fr) auto ${inspector_width}px` }}
       >
         <SceneTree />

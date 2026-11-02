@@ -45,38 +45,42 @@ export function ImagePreviewDialog({ file, on_close }: { file: AssetFile; on_clo
       cancelled = true
       if (object_url) URL.revokeObjectURL(object_url)
     }
-  }, [])
+  }, [file.handle])
 
   return (
     <dialog
       ref={dialog_ref}
-      className="image-preview-dialog"
+      className="open:flex flex-col gap-3 max-w-[min(85vw,64rem)] max-h-[85vh] p-3 border border-border rounded-lg bg-panel text-text shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop:bg-black/65 backdrop:backdrop-blur-[2px] overscroll-contain"
       aria-labelledby={title_id}
       onClose={on_close}
       {...({ closedby: 'any' } as Record<string, unknown>)}
     >
-      <header className="image-preview-header">
-        <h2 id={title_id} className="panel-title">
+      <header className="flex gap-4 items-center justify-between">
+        <h2 id={title_id} className="overflow-hidden m-0 text-[0.9rem] font-semibold text-ellipsis whitespace-nowrap">
           {file.name}
           {dimensions && (
-            <span className="panel-hint">
+            <span className="text-text-muted">
               {' '}
               ({dimensions.width} * {dimensions.height})
             </span>
           )}
         </h2>
         <form method="dialog">
-          <button type="submit" className="toolbar-button" autoFocus>
+          <button
+            type="submit"
+            className="px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit"
+            autoFocus
+          >
             close
           </button>
         </form>
       </header>
-      <div className="image-preview-body">
+      <div className="grid place-items-center overflow-auto min-w-64 min-h-48 p-4 rounded-md checkerboard-pattern">
         {url && (
           <img
             src={url}
             alt={file.name}
-            className="image-preview-img"
+            className="max-w-[75vw] max-h-[70vh] w-auto h-auto min-w-32 object-contain [image-rendering:pixelated]"
             onLoad={(e) =>
               set_dimensions({
                 width: e.currentTarget.naturalWidth,

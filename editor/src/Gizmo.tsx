@@ -85,18 +85,19 @@ function is_typing(target: EventTarget | null): boolean {
   return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
 }
 
-// Handles for moving, rotating and scaling the selected entity, drawn over the canvas. W, E and R switch modes.
+// Lets the user translate, rotate and scale the selected entity directly on the canvas.
 export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement | null> }) {
+  const [mode, set_mode] = useState<Mode>('move')
   const position = useCameraStore((store) => store.position)
   const view_height = useCameraStore((store) => store.view_height)
-  const entity = useSceneStore((store) => store.document?.entities.find((candidate) => candidate.id === store.selected))
+  const selected_id = useSceneStore((store) => store.selected)
+  const entity = useSceneStore((store) => store.document?.entities.find((candidate) => candidate.id === selected_id))
   const update_entity = useSceneStore((store) => store.update_entity)
-  const [mode, set_mode] = useState<Mode>('move')
-  const [size, set_size] = useState<{ width: number; height: number }>()
   const snap_to_grid = useSettingsStore((store) => store.snap_to_grid)
   const grid_size = useSettingsStore((store) => store.grid_size)
   const toggle_setting = useSettingsStore((store) => store.toggle_setting)
   const drag = useRef<Drag>(undefined)
+  const [size, set_size] = useState<{ width: number; height: number }>()
 
   useEffect(() => {
     const canvas = canvas_ref.current
@@ -128,8 +129,17 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
   const transform = entity?.components.transform
 
   function handle_props(handle: Handle) {
+    let color_class = 'text-text'
+    if (handle === 'x' || handle === 'scale_x') {
+      color_class = 'text-axis-x'
+    } else if (handle === 'y' || handle === 'scale_y') {
+      color_class = 'text-axis-y'
+    } else if (handle === 'rotate') {
+      color_class = 'text-accent'
+    }
+
     return {
-      className: `gizmo-handle gizmo-${handle}`,
+      className: `group cursor-grab active:cursor-grabbing pointer-events-auto ${color_class}`,
       onPointerDown(event: PointerEvent<SVGGElement>) {
         const canvas = canvas_ref.current
         if (!canvas || !transform || event.button !== 0) {
@@ -163,7 +173,7 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
     const center_x = size.width / 2 + (transform.position[0] - position.x) / units_per_pixel
     const center_y = size.height / 2 - (transform.position[1] - position.y) / units_per_pixel
     const half = handle_size / 2
-    const square = <rect x={-half} y={-half} width={handle_size} height={handle_size} />
+    const square = <rect x={-half} y={-half} width={handle_size} height={handle_size} fill="currentColor" />
 
     // SVG y points down, so world axes and counter-clockwise angles are flipped.
     handles = (
@@ -171,34 +181,34 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
         {mode === 'move' && (
           <>
             <g {...handle_props('x')}>
-              <line x2={axis_length} />
-              <line className="gizmo-hit" x2={axis_length} />
-              <polygon points={`${axis_length + 12},0 ${axis_length},-6 ${axis_length},6`} />
+              <line x2={axis_length} fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:[stroke-width:3]" />
+              <line x2={axis_length} fill="none" stroke="transparent" strokeWidth={14} />
+              <polygon points={`${axis_length + 12},0 ${axis_length},-6 ${axis_length},6`} fill="currentColor" />
             </g>
             <g {...handle_props('y')}>
-              <line y2={-axis_length} />
-              <line className="gizmo-hit" y2={-axis_length} />
-              <polygon points={`0,${-axis_length - 12} -6,${-axis_length} 6,${-axis_length}`} />
+              <line y2={-axis_length} fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:[stroke-width:3]" />
+              <line y2={-axis_length} fill="none" stroke="transparent" strokeWidth={14} />
+              <polygon points={`0,${-axis_length - 12} -6,${-axis_length} 6,${-axis_length}`} fill="currentColor" />
             </g>
             <g {...handle_props('free')}>{square}</g>
           </>
         )}
         {mode === 'rotate' && (
           <g {...handle_props('rotate')}>
-            <circle r={ring_radius} />
-            <circle className="gizmo-hit" r={ring_radius} />
+            <circle r={ring_radius} fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:[stroke-width:3]" />
+            <circle r={ring_radius} fill="none" stroke="transparent" strokeWidth={14} />
           </g>
         )}
         {mode === 'scale' && (
           <g transform={`rotate(${-transform.rotation * degrees_per_radian})`}>
             <g {...handle_props('scale_x')}>
-              <line x2={axis_length} />
-              <line className="gizmo-hit" x2={axis_length} />
+              <line x2={axis_length} fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:[stroke-width:3]" />
+              <line x2={axis_length} fill="none" stroke="transparent" strokeWidth={14} />
               <g transform={`translate(${axis_length} 0)`}>{square}</g>
             </g>
             <g {...handle_props('scale_y')}>
-              <line y2={-axis_length} />
-              <line className="gizmo-hit" y2={-axis_length} />
+              <line y2={-axis_length} fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:[stroke-width:3]" />
+              <line y2={-axis_length} fill="none" stroke="transparent" strokeWidth={14} />
               <g transform={`translate(0 ${-axis_length})`}>{square}</g>
             </g>
             <g {...handle_props('scale_uniform')}>{square}</g>
@@ -208,15 +218,18 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
     )
   }
 
+  const btn_class =
+    'px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit aria-pressed:border-accent aria-pressed:text-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2'
+
   return (
     <>
-      {handles && <svg className="gizmo">{handles}</svg>}
-      <div className="gizmo-toolbar" role="toolbar" aria-label="Transform tool">
+      {handles && <svg className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">{handles}</svg>}
+      <div className="absolute top-2 left-2 flex gap-1 z-10" role="toolbar" aria-label="Transform tool">
         {modes.map(({ mode: option, label, key }) => (
           <button
             key={option}
             type="button"
-            className="toolbar-button"
+            className={btn_class}
             aria-pressed={mode === option}
             title={`${label} (${key.toUpperCase()})`}
             onClick={() => set_mode(option)}
@@ -226,7 +239,7 @@ export function Gizmo({ canvas_ref }: { canvas_ref: RefObject<HTMLCanvasElement 
         ))}
         <button
           type="button"
-          className="toolbar-button"
+          className={btn_class}
           aria-pressed={snap_to_grid}
           title={`Snap to Grid (${grid_size}u)`}
           onClick={() => toggle_setting('snap_to_grid')}

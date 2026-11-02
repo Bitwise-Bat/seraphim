@@ -66,7 +66,7 @@ export function ContextMenu({ x, y, items, on_close }: ContextMenuProps) {
   return (
     <ul
       ref={menu}
-      className="context-menu"
+      className="fixed z-50 min-w-32 m-0 p-1 border border-border rounded-md bg-panel shadow-[0_4px_16px_rgba(0,0,0,0.4)] list-none"
       role="menu"
       style={{ left: position.x, top: position.y }}
       onKeyDown={on_key_down}
@@ -75,6 +75,7 @@ export function ContextMenu({ x, y, items, on_close }: ContextMenuProps) {
         <li key={item.label} role="none">
           <button
             type="button"
+            className="w-full px-3 py-1.5 border-0 rounded text-left bg-transparent text-text text-sm hover:bg-control-hover focus-visible:bg-control-hover focus-visible:outline-none cursor-pointer transition-colors"
             role="menuitem"
             onClick={() => {
               on_close()

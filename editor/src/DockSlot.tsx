@@ -12,15 +12,22 @@ export function DockSlot() {
 
   const set_active_tab = (tab: DockTab) => set_setting('dock_tab', tab)
 
+  const tab_class = (tab: DockTab) =>
+    `inline-flex items-center gap-[0.35rem] px-3 bg-transparent border-0 border-b-2 font-medium cursor-pointer h-full text-[0.8rem] transition-colors focus-visible:outline-none ${
+      active_tab === tab
+        ? 'text-text bg-panel border-b-accent'
+        : 'border-b-transparent text-text-muted hover:text-text hover:bg-control'
+    }`
+
   return (
-    <div className="dock-slot" aria-label="Bottom dock">
-      <nav className="dock-slot-header" aria-label="Dock panels">
-        <div className="dock-slot-tabs" role="tablist">
+    <div className="flex flex-col min-h-0 w-full h-full bg-panel overflow-hidden" aria-label="Bottom dock">
+      <nav className="flex items-center justify-between bg-background border-b border-border px-2 h-[28px] shrink-0" aria-label="Dock panels">
+        <div className="flex gap-[2px] h-full" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={active_tab === 'assets'}
-            className={`dock-tab${active_tab === 'assets' ? ' active' : ''}`}
+            className={tab_class('assets')}
             onClick={() => set_active_tab('assets')}
           >
             Assets
@@ -29,20 +36,24 @@ export function DockSlot() {
             type="button"
             role="tab"
             aria-selected={active_tab === 'console'}
-            className={`dock-tab${active_tab === 'console' ? ' active' : ''}`}
+            className={tab_class('console')}
             onClick={() => set_active_tab('console')}
           >
             Console
-            {error_count > 0 && <span className="dock-tab-error-badge">{error_count}</span>}
+            {error_count > 0 && (
+              <span className="bg-red-500 text-white rounded-full px-[0.35rem] text-[0.7rem] font-bold leading-[1.2]">
+                {error_count}
+              </span>
+            )}
           </button>
         </div>
       </nav>
 
-      <div className="dock-slot-body">
-        <div className="dock-panel" style={{ display: active_tab === 'assets' ? 'flex' : 'none' }}>
+      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+        <div className="flex flex-col flex-1 w-full h-full min-h-0 min-w-0" style={{ display: active_tab === 'assets' ? 'flex' : 'none' }}>
           <AssetBrowser />
         </div>
-        <div className="dock-panel" style={{ display: active_tab === 'console' ? 'flex' : 'none' }}>
+        <div className="flex flex-col flex-1 w-full h-full min-h-0 min-w-0" style={{ display: active_tab === 'console' ? 'flex' : 'none' }}>
           <Console />
         </div>
       </div>

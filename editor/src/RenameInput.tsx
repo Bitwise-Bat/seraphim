@@ -37,7 +37,7 @@ export function RenameInput({ name, on_commit, on_cancel }: RenameInputProps) {
   return (
     <input
       ref={input}
-      className="rename-input"
+      className="w-full min-w-0 px-1 py-0.5 border border-accent rounded bg-background text-text text-[0.8rem] outline-none"
       aria-label={`New name for ${name}`}
       defaultValue={name}
       onKeyDown={(event) => {

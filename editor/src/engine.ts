@@ -10,7 +10,7 @@ export function get_engine_canvas(): HTMLCanvasElement {
     shared_canvas = document.createElement('canvas')
     shared_canvas.id = 'seraphim-canvas'
     shared_canvas.tabIndex = 0
-    shared_canvas.className = 'viewport-canvas'
+    shared_canvas.className = 'block w-full h-full bg-black outline-none'
   }
   return shared_canvas
 }

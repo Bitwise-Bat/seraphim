@@ -12,7 +12,7 @@ export default function App() {
   }, [restore])
 
   return (
-    <main className="editor">
+    <main className="grid grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)] h-full">
       {state.status === 'open' ? <Workspace project={state.directory} /> : <ProjectPicker />}
     </main>
   )

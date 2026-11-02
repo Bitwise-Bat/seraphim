@@ -49,7 +49,9 @@ export function Splitter({ label, orientation, panel, size, min, max, on_resize 
 
   return (
     <div
-      className={`splitter splitter-${orientation}`}
+      className={`bg-border touch-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
+        orientation === 'horizontal' ? 'h-[6px] cursor-row-resize' : 'w-[4px] cursor-col-resize'
+      }`}
       role="separator"
       aria-label={label}
       aria-orientation={orientation}

@@ -5,27 +5,35 @@ import { find_file_by_id } from './project/assets'
 import { is_sound_name } from './project/audio'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import {
-    component_defaults,
-    type Animator,
-    type AudioSource,
-    type BodyType,
-    type Collider,
-    type ColliderShape,
-    type ComponentName,
-    type Components,
-    type Rigidbody,
-    type SceneDocument,
-    type SceneEntity,
-    type Scripts,
-    type Sprite,
-    type Tilemap,
-    type TilemapOrientation,
-    type Transform, type SpriteLayer,
+  component_defaults,
+  type Animator,
+  type AudioSource,
+  type BodyType,
+  type Collider,
+  type ColliderShape,
+  type ComponentName,
+  type Components,
+  type Rigidbody,
+  type SceneDocument,
+  type SceneEntity,
+  type Scripts,
+  type Sprite,
+  type Tilemap,
+  type TilemapOrientation,
+  type Transform,
+  type SpriteLayer,
 } from './project/scene_document'
 import { useSceneStore } from './project/scene_store'
 import { empty_layer, is_tileset_name, resize_tilemap } from './project/tilemap'
 import { TilePalette } from './TilePalette'
 import { useTilemapToolStore, type TilemapTool } from './tilemap_tool_store'
+
+const input_class =
+  'flex-1 min-w-0 px-1 py-0.5 border border-border rounded bg-background text-text text-[0.85rem] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-1 transition-colors'
+const select_class =
+  'min-w-0 px-1 py-0.5 border border-border rounded bg-background text-text text-[0.85rem] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-1 transition-colors cursor-pointer'
+const btn_class =
+  'px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit aria-pressed:border-accent aria-pressed:text-accent'
 
 type NumberFieldProps = {
   label: string
@@ -45,12 +53,13 @@ function NumberField({ label, value, step = 0.1, on_change }: NumberFieldProps) 
   }
 
   return (
-    <label className="number-field">
+    <label className="flex flex-1 basis-16 gap-1 items-center min-w-0 text-text-muted text-xs">
       <span>{label}</span>
       <input
         type="number"
         step={step}
         value={text}
+        className={input_class}
         onChange={(event) => {
           set_text(event.target.value)
           const parsed = event.target.valueAsNumber
@@ -73,7 +82,7 @@ type SelectFieldProps<T extends string> = {
 
 function SelectField<T extends string>({ label, value, options, on_change }: SelectFieldProps<T>) {
   return (
-    <select aria-label={label} value={value} onChange={(event) => on_change(event.target.value as T)}>
+    <select aria-label={label} value={value} className={select_class} onChange={(event) => on_change(event.target.value as T)}>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -93,15 +102,21 @@ function CheckboxField({
   on_change: (value: boolean) => void
 }) {
   return (
-    <input type="checkbox" aria-label={label} checked={value} onChange={(event) => on_change(event.target.checked)} />
+    <input
+      type="checkbox"
+      aria-label={label}
+      checked={value}
+      className="m-0 accent-accent cursor-pointer"
+      onChange={(event) => on_change(event.target.checked)}
+    />
   )
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="inspector-row">
-      <span className="inspector-label">{label}</span>
-      <div className="inspector-fields">{children}</div>
+    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 items-center mb-1.5">
+      <span className="text-text-muted text-[0.85rem]">{label}</span>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   )
 }
@@ -178,10 +193,18 @@ function AssetField({ store, asset, placeholder, clear_label = 'Clear', accepts,
   const label = !asset ? placeholder : (file?.path ?? `Missing asset ${asset}`)
 
   return (
-    <div className={`asset-field${drop.active ? ' drop-target' : ''}`} title={file?.path} {...drop.handlers}>
-      <span className={file ? 'asset-field-name' : 'asset-field-name panel-hint'}>{label}</span>
+    <div
+      className={`flex flex-1 gap-1.5 items-center min-w-0 p-1 border border-dashed rounded text-[0.8rem] ${
+        drop.active ? 'border-accent outline-2 outline-accent -outline-offset-2' : 'border-border'
+      }`}
+      title={file?.path}
+      {...drop.handlers}
+    >
+      <span className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${file ? 'text-text' : 'text-text-muted'}`}>
+        {label}
+      </span>
       {asset && (
-        <button type="button" className="toolbar-button" onClick={() => on_change('')}>
+        <button type="button" className={btn_class} onClick={() => on_change('')}>
           {clear_label}
         </button>
       )}
@@ -191,15 +214,15 @@ function AssetField({ store, asset, placeholder, clear_label = 'Clear', accepts,
 
 function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: Sprite) => void }) {
   const [r, g, b, a] = value.color
-    const layers = value.layers || []
-    
-    function update_layer(index: number,  patch: Partial<SpriteLayer>){
-      on_change({
-          ...value,
-          layers: layers.map((layer,  i) => (i === index ? {...layer, ...patch} : layer))
-      })
-    }
-    
+  const layers = value.layers || []
+
+  function update_layer(index: number, patch: Partial<SpriteLayer>) {
+    on_change({
+      ...value,
+      layers: layers.map((layer, i) => (i === index ? { ...layer, ...patch } : layer)),
+    })
+  }
+
   return (
     <>
       <Row label="Texture">
@@ -217,6 +240,7 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
         <input
           type="color"
           aria-label="Color"
+          className="w-10 h-6 p-0 border border-border rounded bg-background cursor-pointer"
           value={`#${to_hex(r)}${to_hex(g)}${to_hex(b)}`}
           onChange={(event) => {
             const hex = event.target.value
@@ -241,76 +265,65 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
           on_change={(order) => on_change({ ...value, order: Math.round(order) })}
         />
       </Row>
-        <div className="inspector-list">
-            {layers.map((layer,  index) => (
-               <div
-                key={index}
-                style={{
-                    display: "flex",
-                    flexDirection: 'column',
-                    gap: '0.375rem',
-                    padding: '0.375rem',
-                    border: '1px solid var(--border)',
-                    borderRadius: '0.25rem'
-                }}
-               >
-                   <Row label="Slots">
-                       <input
-                        className="inspector-name"
-                        style={{ flex: 1 }}
-                        placeholder="e.g. hand, pants, helmet"
-                        value={layer.name}
-                        onChange={(e) => update_layer(index, { name: e.target.value })}
-                       />
-                       <button 
-                        type="button"
-                        className="toolbar-button"
-                        onClick={() => on_change({ ...value, layers: layers.filter((_, i) => i !== index)})}
-                       >
-                           Remove
-                       </button>
-                   </Row>
-                   <Row label="Texture">
-                       <AssetField 
-                           store={useAssetStore} 
-                           asset={layer.texture} 
-                           placeholder="Drop layer image here" 
-                           on_change={(texture) => update_layer(index,  { texture })} 
-                       />
-                   </Row>
-                   <Row label="Offset">
-                       <VectorFields 
-                            labels={['X', 'Y']}
-                            values={layer.offset}
-                            on_change={(offset) => update_layer(index,  {offset})}
-                       />
-                   </Row>
-                   <Row label="Order +">
-                       <NumberField 
-                           label="#" 
-                           value={layer.order} 
-                           step={1} 
-                           on_change={(order_offset) => update_layer(index,  {order: Math.round(order_offset)})} 
-                       />
-                   </Row>
-               </div>
-            ))}
-        </div>
-            <button
+      <div className="flex flex-col gap-1.5">
+        {layers.map((layer, index) => (
+          <div key={index} className="flex flex-col gap-1.5 p-1.5 border border-border rounded">
+            <Row label="Slots">
+              <input
+                className={input_class}
+                placeholder="e.g. hand, pants, helmet"
+                value={layer.name}
+                onChange={(e) => update_layer(index, { name: e.target.value })}
+              />
+              <button
                 type="button"
-                className="toolbar-button"
-                onClick={() =>
-                    on_change({
-                        ...value,
-                        layers: [
-                            ...layers,
-                            { name: `layer_${layers.length + 1}`, texture: '', offset: [0, 0], color: [1, 1, 1, 1], order_offset: 1 },
-                        ],
-                    })
-                }
-            >
-                Add sprite layer
-            </button>
+                className={btn_class}
+                onClick={() => on_change({ ...value, layers: layers.filter((_, i) => i !== index) })}
+              >
+                Remove
+              </button>
+            </Row>
+            <Row label="Texture">
+              <AssetField
+                store={useAssetStore}
+                asset={layer.texture}
+                placeholder="Drop layer image here"
+                on_change={(texture) => update_layer(index, { texture })}
+              />
+            </Row>
+            <Row label="Offset">
+              <VectorFields
+                labels={['X', 'Y']}
+                values={layer.offset}
+                on_change={(offset) => update_layer(index, { offset })}
+              />
+            </Row>
+            <Row label="Order +">
+              <NumberField
+                label="#"
+                value={layer.order}
+                step={1}
+                on_change={(order_offset) => update_layer(index, { order: Math.round(order_offset) })}
+              />
+            </Row>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={btn_class}
+        onClick={() =>
+          on_change({
+            ...value,
+            layers: [
+              ...layers,
+              { name: `layer_${layers.length + 1}`, texture: '', offset: [0, 0], color: [1, 1, 1, 1], order: 1 },
+            ],
+          })
+        }
+      >
+        Add sprite layer
+      </button>
     </>
   )
 }
@@ -363,14 +376,18 @@ type BitmaskFieldProps = {
 
 function BitmaskField({ label, value, on_change }: BitmaskFieldProps) {
   return (
-    <div className="bitmask-grid" role="group" aria-label={label}>
+    <div className="grid grid-cols-8 gap-1 w-full" role="group" aria-label={label}>
       {Array.from({ length: 16 }, (_, i) => {
         const active = (value & (1 << i)) !== 0
         return (
           <button
             key={i}
             type="button"
-            className="bitmask-button"
+            className={`inline-flex items-center justify-center h-[1.375rem] p-0 border rounded text-xs font-mono tabular-nums cursor-pointer select-none transition-colors ${
+              active
+                ? 'border-accent bg-[rgba(122,162,255,0.18)] text-accent font-semibold'
+                : 'border-border bg-control text-text-muted hover:bg-control-hover hover:text-text'
+            }`}
             aria-pressed={active}
             title={`${label} ${i}: ${active ? 'Enabled' : 'Disabled'}`}
             onClick={() => on_change(value ^ (1 << i))}
@@ -455,10 +472,10 @@ function AnimatorFields({ value, on_change }: { value: Animator; on_change: (val
           on_change={(animation_set) => on_change({ ...value, animation_set })}
         />
       </Row>
-      <label className="inspector-row">
-        <span className="inspector-label">Clip</span>
+      <label className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 items-center mb-1.5">
+        <span className="text-text-muted text-[0.85rem]">Clip</span>
         <input
-          className="inspector-name"
+          className={input_class}
           value={value.clip}
           onChange={(event) => on_change({ ...value, clip: event.target.value })}
         />
@@ -540,7 +557,7 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
         )}
         <button
           type="button"
-          className="toolbar-button"
+          className={btn_class}
           onClick={() => {
             on_change({ ...value, layers: [...value.layers, empty_layer(value.size)] })
             set_layer(value.layers.length)
@@ -551,7 +568,7 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
         {value.layers.length > 0 && (
           <button
             type="button"
-            className="toolbar-button"
+            className={btn_class}
             onClick={() => on_change({ ...value, layers: value.layers.filter((_, index) => index !== layer) })}
           >
             Remove
@@ -563,7 +580,7 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
           <button
             key={option.value}
             type="button"
-            className="toolbar-button"
+            className={btn_class}
             aria-pressed={tool === option.value}
             onClick={() => set_tool(option.value)}
           >
@@ -578,72 +595,76 @@ function TilemapFields({ value, on_change }: { value: Tilemap; on_change: (value
 
 type ScriptFieldDef = {
   name: string
+  label?: string
   type: 'number' | 'string' | 'boolean' | 'asset' | 'entity'
-  default_value?: unknown
   min?: number
   max?: number
   step?: number
-  label?: string
+  default_value?: unknown
 }
 
 function parse_script_fields(source: string): ScriptFieldDef[] {
   const fields: ScriptFieldDef[] = []
-  const regex = /@(?:field|exported)(?:\s*\(([\s\S]*?)\))?\s*(?:readonly\s+)?(?:public\s+|private\s+|protected\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*:\s*([^=;\n]+))?(?:\s*=\s*([^;\n]+))?/g
+  const class_match = source.match(/export\s+default\s+class\s+\w+\s+extends\s+Component\s*\{([\s\S]*)/)
+  if (!class_match) return fields
+  const body = class_match[1]
 
+  const prop_regex =
+    /(?:\/\*\*([\s\S]*?)\*\/)?\s*(\w+)\s*(?::\s*([\w<>]+))?\s*(?:=\s*([^;\n]+))?\s*[;\n]/g
   let match: RegExpExecArray | null
-  while ((match = regex.exec(source)) !== null) {
-    const raw_options = match[1]?.trim()
-    const name = match[2]
-    const raw_type = match[3]?.trim()
-    const raw_val = match[4]?.trim()
+  while ((match = prop_regex.exec(body)) !== null) {
+    const [, jsdoc, name, type_annot, def_expr] = match
+    if (!name || name === 'constructor' || name.startsWith('_')) continue
 
-    let options: Record<string, unknown> = {}
-    if (raw_options) {
-      try {
-        options = new Function(`return (${raw_options})`)() as Record<string, unknown>
-      } catch {
-        options = {}
-      }
+    let type: ScriptFieldDef['type'] = 'string'
+    let min: number | undefined
+    let max: number | undefined
+    let step: number | undefined
+    let label: string | undefined
+
+    if (type_annot) {
+      const lower = type_annot.toLowerCase().trim()
+      if (lower === 'number') type = 'number'
+      else if (lower === 'string') type = 'string'
+      else if (lower === 'boolean') type = 'boolean'
+      else if (lower === 'entity') type = 'entity'
+      else if (lower === 'asset') type = 'asset'
     }
 
-    let default_value = options.default
-    if (default_value === undefined && raw_val !== undefined) {
-      try {
-        default_value = new Function(`return (${raw_val})`)()
-      } catch {
-        default_value = raw_val.replace(/^['"`]|['"`]$/g, '')
-      }
+    if (def_expr !== undefined) {
+      const trimmed = def_expr.trim()
+      if (/^-?\d+(\.\d+)?$/.test(trimmed)) type = 'number'
+      else if (trimmed === 'true' || trimmed === 'false') type = 'boolean'
+      else if (/^['"`]/.test(trimmed)) type = 'string'
     }
 
-    let type: ScriptFieldDef['type'] = (options.type as ScriptFieldDef['type']) || 'string'
-    if (!options.type) {
-      if (typeof default_value === 'number' || raw_type === 'number') {
-        type = 'number'
-      } else if (typeof default_value === 'boolean' || raw_type === 'boolean') {
-        type = 'boolean'
-      } else if (typeof default_value === 'string' || raw_type === 'string') {
-        type = 'string'
-      } else if (raw_type === 'Entity' || raw_type === 'entity') {
-        type = 'entity'
-      }
-    }
+    if (jsdoc) {
+      const min_m = jsdoc.match(/@min\s+(-?\d+(?:\.\d+)?)/)
+      const max_m = jsdoc.match(/@max\s+(-?\d+(?:\.\d+)?)/)
+      const step_m = jsdoc.match(/@step\s+(-?\d+(?:\.\d+)?)/)
+      const type_m = jsdoc.match(/@type\s+(\w+)/)
+      const label_m = jsdoc.match(/@label\s+([^\n*]+)/)
 
-    if (default_value === undefined) {
-      if (type === 'number') default_value = 0
-      else if (type === 'boolean') default_value = false
-      else if (type === 'string') default_value = ''
-      else if (type === 'asset') default_value = ''
-      else if (type === 'entity') default_value = ''
+      if (min_m) min = Number(min_m[1])
+      if (max_m) max = Number(max_m[1])
+      if (step_m) step = Number(step_m[1])
+      if (label_m) label = label_m[1].trim()
+      if (type_m) {
+        const t = type_m[1].toLowerCase()
+        if (t === 'asset' || t === 'entity' || t === 'number' || t === 'string' || t === 'boolean') {
+          type = t
+        }
+      }
     }
 
     fields.push({
       name,
+      label,
       type,
-      default_value,
-      min: typeof options.min === 'number' ? options.min : undefined,
-      max: typeof options.max === 'number' ? options.max : undefined,
-      step: typeof options.step === 'number' ? options.step : undefined,
-      label: typeof options.label === 'string' ? options.label : undefined,
+      min,
+      max,
+      step,
+      default_value: def_expr ? def_expr.trim() : undefined,
     })
   }
 
@@ -660,7 +681,7 @@ function render_field_editor(
     const num = typeof val === 'number' ? val : Number(val) || 0
     if (def.min !== undefined && def.max !== undefined) {
       return (
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+        <div className="flex gap-2 items-center w-full">
           <input
             type="range"
             min={def.min}
@@ -668,7 +689,7 @@ function render_field_editor(
             step={def.step ?? (Number.isInteger(def.min) && Number.isInteger(def.max) ? 1 : 0.1)}
             value={num}
             onChange={(e) => on_change(Number(e.target.value))}
-            style={{ flex: 1 }}
+            className="flex-1 accent-accent cursor-pointer"
           />
           <NumberField
             label=""
@@ -702,8 +723,7 @@ function render_field_editor(
   if (def.type === 'string') {
     return (
       <input
-        className="inspector-name"
-        style={{ width: '100%' }}
+        className={input_class}
         value={String(val ?? '')}
         onChange={(e) => on_change(e.target.value)}
       />
@@ -724,8 +744,7 @@ function render_field_editor(
   if (def.type === 'entity') {
     return (
       <select
-        className="inspector-name"
-        style={{ width: '100%', height: '1.75rem' }}
+        className="w-full h-7 min-w-0 px-1 py-0.5 border border-border rounded bg-background text-text text-[0.85rem] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-1 transition-colors cursor-pointer"
         value={String(val ?? '')}
         onChange={(e) => on_change(e.target.value)}
       >
@@ -802,17 +821,7 @@ function ScriptItem({
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.375rem',
-        padding: '0.375rem',
-        background: 'var(--surface-sunken)',
-        borderRadius: '4px',
-        marginBottom: '0.25rem',
-      }}
-    >
+    <div className="flex flex-col gap-1.5 p-1.5 bg-background rounded mb-1">
       <AssetField
         store={useScriptStore}
         asset={asset}
@@ -832,7 +841,7 @@ function ScriptItem({
         }}
       />
       {fields.length > 0 && (
-        <div style={{ marginTop: '0.25rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
+        <div className="mt-1 pl-2 border-l-2 border-border">
           {fields.map((def) => {
             const current_val = script_props[def.name] ?? def.default_value
             return (
@@ -851,7 +860,7 @@ function ScriptFields({ value, on_change }: { value: Scripts; on_change: (value:
   const all_entities = useSceneStore((store) => store.document?.entities ?? [])
 
   return (
-    <div className="inspector-list">
+    <div className="flex flex-col gap-1.5">
       {value.assets.map((asset, index) => (
         <ScriptItem
           key={`${asset}-${index}`}
@@ -925,10 +934,10 @@ type ComponentSectionProps = {
 
 function ComponentSection({ name, on_remove, children }: ComponentSectionProps) {
   return (
-    <section className="inspector-component" aria-label={component_titles[name]}>
-      <header className="panel-header">
-        <h3 className="panel-title">{component_titles[name]}</h3>
-        <button type="button" className="toolbar-button" onClick={on_remove}>
+    <section className="mt-3 pt-2 border-t border-border" aria-label={component_titles[name]}>
+      <header className="flex gap-2 items-center justify-between mb-2">
+        <h3 className="overflow-hidden m-0 text-[0.9rem] font-semibold text-ellipsis whitespace-nowrap">{component_titles[name]}</h3>
+        <button type="button" className={btn_class} onClick={on_remove}>
           Remove
         </button>
       </header>
@@ -955,10 +964,10 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
 
   return (
     <>
-      <label className="inspector-row">
-        <span className="inspector-label">Name</span>
+      <label className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 items-center mb-1.5">
+        <span className="text-text-muted text-[0.85rem]">Name</span>
         <input
-          className="inspector-name"
+          className={input_class}
           value={entity.name}
           onChange={(event) => update_entity(entity.id, (current) => ({ ...current, name: event.target.value }))}
         />
@@ -1007,12 +1016,12 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
         </ComponentSection>
       )}
       {missing.length > 0 && (
-        <div className="inspector-add">
+        <div className="flex flex-wrap gap-1.5 mt-3">
           {missing.map((name) => (
             <button
               key={name}
               type="button"
-              className="toolbar-button"
+              className={btn_class}
               onClick={() => set_component(name, component_defaults[name]())}
             >
               Add {component_titles[name]}
@@ -1026,20 +1035,25 @@ function EntityInspector({ entity }: { entity: SceneEntity }) {
 
 function SceneInspector({ document }: { document: SceneDocument }) {
   const set_gravity = useSceneStore((store) => store.set_gravity)
-  const set_clear_color = useSceneStore(store => store.set_clear_color) 
+  const set_clear_color = useSceneStore((store) => store.set_clear_color)
 
   return (
     <section aria-label="Scene">
-      <header className="panel-header">
-        <h3 className="panel-title">Scene</h3>
+      <header className="flex gap-2 items-center justify-between mb-2">
+        <h3 className="overflow-hidden m-0 text-[0.9rem] font-semibold text-ellipsis whitespace-nowrap">Scene</h3>
       </header>
       <Row label="Gravity">
         <VectorFields labels={['X', 'Y']} values={document.gravity} on_change={set_gravity} />
       </Row>
-        <Row label="Clear Color">
-            <input type="color" value={document.clear_color} onChange={v => set_clear_color(v.target.value)}/>
-        </Row>
-      <p className="panel-hint">Select an entity to edit it.</p>
+      <Row label="Clear Color">
+        <input
+          type="color"
+          className="w-10 h-6 p-0 border border-border rounded bg-background cursor-pointer"
+          value={document.clear_color}
+          onChange={(v) => set_clear_color(v.target.value)}
+        />
+      </Row>
+      <p className="text-text-muted text-sm mt-2">Select an entity to edit it.</p>
     </section>
   )
 }
@@ -1050,7 +1064,7 @@ export function Inspector() {
   const entity = document?.entities.find((candidate) => candidate.id === selected)
 
   return (
-    <section className="panel inspector" aria-label="Inspector">
+    <section className="overflow-auto min-w-0 p-3 bg-panel" aria-label="Inspector">
       {entity && <EntityInspector key={entity.id} entity={entity} />}
       {!entity && document && <SceneInspector document={document} />}
     </section>

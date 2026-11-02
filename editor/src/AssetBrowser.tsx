@@ -48,7 +48,9 @@ function PathSegment({ label, path }: { label: string; path: string }) {
   return (
     <button
       type="button"
-      className={drop.active ? 'drop-target' : undefined}
+      className={`p-0 border-0 bg-transparent text-inherit hover:underline cursor-pointer ${
+        drop.active ? 'outline-2 outline-accent -outline-offset-2' : ''
+      }`}
       onClick={() => navigate(path)}
       {...drop.handlers}
     >
@@ -69,7 +71,17 @@ type AssetTileProps = {
   on_double_click?: () => void
 }
 
-function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu, on_rename, on_rename_end, on_double_click }: AssetTileProps) {
+function AssetTile({
+  entry,
+  path,
+  thumbnail,
+  renaming,
+  on_open,
+  on_context_menu,
+  on_rename,
+  on_rename_end,
+  on_double_click,
+}: AssetTileProps) {
   const folder = useBrowserStore((store) => store.folder)
   const current_path = useBrowserStore((store) => store.current_path)
   const drop = useFolderDrop(path)
@@ -78,7 +90,7 @@ function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu,
 
   if (renaming) {
     return (
-      <div className="asset-tile">
+      <div className="flex flex-col items-center gap-1 w-full p-1.5 border border-transparent rounded-md bg-transparent">
         {thumbnail}
         <RenameInput
           name={entry.name}
@@ -94,17 +106,19 @@ function AssetTile({ entry, path, thumbnail, renaming, on_open, on_context_menu,
   return (
     <button
       type="button"
-      className={`asset-tile${drop.active ? ' drop-target' : ''}`}
+      className={`flex flex-col items-center gap-1 w-full p-1.5 border border-transparent rounded-md bg-transparent hover:border-border hover:bg-control cursor-pointer transition-colors ${
+        drop.active ? 'outline-2 outline-accent -outline-offset-2' : ''
+      }`}
       title={path}
       draggable
       onDragStart={(event) => start_asset_drag(event, folder, { source_path: current_path, entry })}
       onClick={on_open}
       onContextMenu={on_context_menu}
-      onDoubleClick={() => on_double_click()}
+      onDoubleClick={() => on_double_click?.()}
       {...drop_props}
     >
       {thumbnail}
-      <span className="asset-name">{entry.name}</span>
+      <span className="max-w-full overflow-hidden text-[0.8rem] text-ellipsis whitespace-nowrap">{entry.name}</span>
     </button>
   )
 }
@@ -151,7 +165,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   const create_file_in_current = useBrowserStore((store) => store.create_file_in_current)
   const rename = useBrowserStore((store) => store.rename)
   const remove = useBrowserStore((store) => store.remove)
-  const find_id = useBrowserStore((store) => store.find_id);
+  const find_id = useBrowserStore((store) => store.find_id)
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
@@ -180,8 +194,6 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
     set_dragging_files(false)
     void import_into_current(dropped_files(event))
   }
-
-  console.log(preview_file)
 
   function open_menu(event: MouseEvent, items: ContextMenuItem[]) {
     event.preventDefault()
@@ -214,30 +226,31 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
       void remove(entry)
     }
   }
-  
-  async function copy_uuid(entry: AssetEntry, path: string){
-    const id = await find_id(entry, path);
-    if (!id) return console.error("File doesn't have UUID");
-    await navigator.clipboard.writeText(id);
+
+  async function copy_uuid(entry: AssetEntry, path: string) {
+    const id = await find_id(entry, path)
+    if (!id) return console.error("File doesn't have UUID")
+    await navigator.clipboard.writeText(id)
   }
 
   function tile_props(entry: AssetEntry) {
-    const path = join_path(current_path, entry.name);
-    
+    const path = join_path(current_path, entry.name)
+
     return {
       entry,
       path: path,
       renaming: renaming === entry.name,
       on_context_menu: (event: MouseEvent) => {
-        const context_options : ContextMenuItem[] = [];
+        const context_options: ContextMenuItem[] = []
 
-        if (entry.kind === "file")
-          context_options.push({ label: "Copy UUID", action: () => copy_uuid(entry, path)});
+        if (entry.kind === 'file') {
+          context_options.push({ label: 'Copy UUID', action: () => copy_uuid(entry, path) })
+        }
 
         context_options.push(
-            { label: 'Rename', action: () => set_renaming(entry.name) },
-            { label: 'Delete', action: () => confirm_delete(entry) },
-        );
+          { label: 'Rename', action: () => set_renaming(entry.name) },
+          { label: 'Delete', action: () => confirm_delete(entry) },
+        )
         open_menu(event, context_options)
       },
       on_rename: (new_name: string) => void rename(entry, new_name),
@@ -249,7 +262,9 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
     <>
       {preview_file && <ImagePreviewDialog file={preview_file} on_close={() => set_preview_file(undefined)} />}
       <section
-        className={`asset-browser${dragging_files ? ' asset-browser-dragging' : ''}`}
+        className={`grid min-h-0 w-full h-full flex-1 bg-panel ${
+          dragging_files ? 'outline-2 outline-dashed outline-accent -outline-offset-4' : ''
+        }`}
         style={{ gridTemplateColumns: `${tree_width}px auto minmax(0, 1fr)` }}
         aria-label="Assets"
         onDragOver={on_drag_over}
@@ -271,12 +286,9 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
           max={tree_width_limits.max}
           on_resize={on_tree_resize}
         />
-        <div
-          className="asset-content"
-          onContextMenu={(event) => open_menu(event, create_actions)}
-        >
-          <div className="asset-toolbar">
-            <nav className="asset-path" aria-label="Asset folder path">
+        <div className="overflow-auto p-3 min-w-0 flex-1" onContextMenu={(event) => open_menu(event, create_actions)}>
+          <div className="flex gap-4 items-center justify-between">
+            <nav className="text-sm" aria-label="Asset folder path">
               <PathSegment label={folder_name} path="" />
               {segments.map((segment, index) => (
                 <span key={index}>
@@ -285,22 +297,27 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
                 </span>
               ))}
             </nav>
-            <div className="asset-toolbar-actions">
+            <div className="flex gap-2">
               {create_actions.map(({ label, action }) => (
-                <button key={label} type="button" className="asset-toolbar-button" onClick={action}>
+                <button
+                  key={label}
+                  type="button"
+                  className="px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit"
+                  onClick={action}
+                >
                   {label}
                 </button>
               ))}
             </div>
           </div>
-          {error && <p role="alert">{error}</p>}
-          {folder && folder.folders.length + folder.files.length === 0 && <p className="asset-hint">{hint}</p>}
-          <ul className="asset-grid">
+          {error && <p role="alert" className="text-red-400 text-sm mt-2">{error}</p>}
+          {folder && folder.folders.length + folder.files.length === 0 && <p className="text-text-muted text-sm mt-2">{hint}</p>}
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2 mt-2 p-0 list-none">
             {folder?.folders.map((child) => (
               <li key={child.path}>
                 <AssetTile
                   {...tile_props({ kind: 'directory', name: child.name })}
-                  thumbnail={<span className="asset-thumbnail asset-thumbnail-label">folder</span>}
+                  thumbnail={<span className="w-16 h-16 grid place-items-center rounded bg-control text-text-muted text-xs uppercase">folder</span>}
                   on_open={() => navigate(child.path)}
                 />
               </li>

@@ -19,7 +19,13 @@ function TreeNode({ folder, selected, on_select }: TreeNodeProps) {
     <li>
       <button
         type="button"
-        className={`asset-tree-node${drop.active ? ' drop-target' : ''}`}
+        className={`block w-full overflow-hidden px-2 py-0.5 border-0 rounded text-left text-ellipsis whitespace-nowrap cursor-pointer transition-colors text-[0.85rem] ${
+          drop.active ? 'outline-2 outline-accent -outline-offset-2 ' : ''
+        }${
+          selected && folder.path === current_path
+            ? 'bg-control-hover text-accent font-medium'
+            : 'bg-transparent text-text hover:bg-control'
+        }`}
         aria-current={selected && folder.path === current_path ? 'location' : undefined}
         onClick={() => {
           on_select()
@@ -30,7 +36,7 @@ function TreeNode({ folder, selected, on_select }: TreeNodeProps) {
         {folder.name}
       </button>
       {folder.folders.length > 0 && (
-        <ul>
+        <ul className="m-0 pl-3 list-none">
           {folder.folders.map((child) => (
             <TreeNode key={child.path} folder={child} selected={selected} on_select={on_select} />
           ))}
@@ -53,8 +59,8 @@ type AssetTreeProps = {
 
 export function AssetTree({ stores, selected, on_select }: AssetTreeProps) {
   return (
-    <nav className="asset-tree" aria-label="Asset folders">
-      <ul>
+    <nav className="overflow-auto py-2 px-1" aria-label="Asset folders">
+      <ul className="m-0 p-0 list-none">
         {stores.map((store, index) => (
           <AssetBrowserContext key={index} value={store}>
             <RootNode selected={index === selected} on_select={() => on_select(index)} />

@@ -37,21 +37,25 @@ export function SceneTree() {
   }
 
   return (
-    <section className="panel scene-tree" aria-label="Scene">
-      <header className="panel-header">
-        <h2 className="panel-title">
+    <section className="overflow-auto min-w-0 p-3 bg-panel" aria-label="Scene">
+      <header className="flex gap-2 items-center justify-between mb-2">
+        <h2 className="overflow-hidden m-0 text-[0.9rem] font-semibold text-ellipsis whitespace-nowrap">
           {main_scene_file}
           {dirty && <span title="Unsaved changes (Ctrl+S saves)"> •</span>}
         </h2>
         {document && (
-          <button type="button" className="toolbar-button" onClick={() => set_renaming(add_entity())}>
+          <button
+            type="button"
+            className="px-2 py-0.5 border border-border rounded bg-control text-[0.85rem] shrink-0 hover:bg-control-hover transition-colors cursor-pointer text-inherit"
+            onClick={() => set_renaming(add_entity())}
+          >
             Add entity
           </button>
         )}
       </header>
-      {error && <p role="alert">{error}</p>}
-      {document?.entities.length === 0 && <p className="panel-hint">The scene is empty.</p>}
-      <ul className="scene-entities">
+      {error && <p role="alert" className="text-red-400 text-sm mb-2">{error}</p>}
+      {document?.entities.length === 0 && <p className="text-text-muted text-sm">The scene is empty.</p>}
+      <ul className="m-0 p-0 list-none flex flex-col gap-0.5">
         {document?.entities.map((entity) => (
           <li key={entity.id}>
             {renaming === entity.id ? (
@@ -68,7 +72,11 @@ export function SceneTree() {
             ) : (
               <button
                 type="button"
-                className="scene-entity"
+                className={`block w-full overflow-hidden px-2 py-0.5 border-0 rounded text-left text-ellipsis whitespace-nowrap transition-colors cursor-pointer text-[0.85rem] ${
+                  entity.id === selected
+                    ? 'bg-control-hover text-accent font-medium'
+                    : 'bg-transparent text-text hover:bg-control'
+                }`}
                 aria-current={entity.id === selected ? 'true' : undefined}
                 onClick={() => select(entity.id)}
                 onDoubleClick={() => set_renaming(entity.id)}

@@ -20,7 +20,6 @@ function Outline({ entity }: { entity: SceneEntity }) {
 
   return (
     <g
-      className={collider.sensor ? 'collider-outline collider-sensor' : 'collider-outline'}
       transform={`translate(${position[0]} ${position[1]}) rotate(${rotation * degrees_per_radian})`}
     >
       {collider.shape === 'box' ? (
@@ -29,9 +28,23 @@ function Outline({ entity }: { entity: SceneEntity }) {
           y={center_y - (collider.size[1] * Math.abs(scale_y)) / 2}
           width={collider.size[0] * Math.abs(scale_x)}
           height={collider.size[1] * Math.abs(scale_y)}
+          fill="none"
+          stroke="var(--color-collider)"
+          strokeWidth={1.5}
+          vectorEffect="non-scaling-stroke"
+          strokeDasharray={collider.sensor ? '4 3' : undefined}
         />
       ) : (
-        <circle cx={center_x} cy={center_y} r={collider.radius * Math.max(Math.abs(scale_x), Math.abs(scale_y))} />
+        <circle
+          cx={center_x}
+          cy={center_y}
+          r={collider.radius * Math.max(Math.abs(scale_x), Math.abs(scale_y))}
+          fill="none"
+          stroke="var(--color-collider)"
+          strokeWidth={1.5}
+          vectorEffect="non-scaling-stroke"
+          strokeDasharray={collider.sensor ? '4 3' : undefined}
+        />
       )}
     </g>
   )
@@ -49,10 +62,16 @@ function TilemapBounds({ entity }: { entity: SceneEntity }) {
   )
   return (
     <g
-      className="tilemap-bounds"
       transform={`translate(${transform.position[0]} ${transform.position[1]}) rotate(${transform.rotation * degrees_per_radian}) scale(${transform.scale[0]} ${transform.scale[1]})`}
     >
-      <polygon points={corners.join(' ')} />
+      <polygon
+        points={corners.join(' ')}
+        fill="none"
+        stroke="var(--color-accent)"
+        strokeWidth={1}
+        strokeDasharray="6 4"
+        vectorEffect="non-scaling-stroke"
+      />
     </g>
   )
 }
@@ -86,7 +105,7 @@ export function ColliderOutlines({ canvas_ref }: { canvas_ref: RefObject<HTMLCan
 
   // The group maps world units to pixels with y flipped, so outlines are written in world coordinates.
   return (
-    <svg className="collider-outlines" aria-hidden="true">
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
       <g
         transform={`translate(${size.width / 2} ${size.height / 2}) scale(${pixels_per_unit} ${-pixels_per_unit}) translate(${-position.x} ${-position.y})`}
       >
