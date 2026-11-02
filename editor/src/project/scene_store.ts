@@ -102,7 +102,7 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         current_scene_handle: undefined,
       })
       try {
-        const { text, handle } = await get_main_scene(next_project)
+        const { text, handle, name } = await get_main_scene(next_project)
         const problem = next_engine.Engine.load_scene(text)
         if (problem) {
           set({ error: `The main scene could not be loaded: ${problem}` })
@@ -112,8 +112,8 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         set({
           document: JSON.parse(next_engine.World.save_scene()) as SceneDocument,
           current_scene_handle: handle,
-          current_scene_name: main_scene_file,
-          current_scene_path: main_scene_file,
+          current_scene_name: name || main_scene_file,
+          current_scene_path: name || main_scene_file,
         })
         void useAssetStore.getState().scan(next_project)
       } catch (error) {

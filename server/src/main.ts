@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import create_engine from '../../build/web-debug/seraphim_server.mjs'
@@ -61,9 +61,47 @@ if (!project_path) {
   watched_name = raw_args.slice(1).join(' ') || undefined
 }
 
-const asset_scene_path = join(project_path, 'assets', 'main.scene.json')
-const legacy_scene_path = join(project_path, 'scenes', 'main.scene.json')
-const scene_path = existsSync(asset_scene_path) ? asset_scene_path : legacy_scene_path
+function find_scene_path(project: string): string | undefined {
+  const direct_asset = join(project, 'assets', 'main.scene.json')
+  if (existsSync(direct_asset)) return direct_asset
+
+  const assets_dir = join(project, 'assets')
+  if (existsSync(assets_dir)) {
+    let fallback: string | undefined
+    function walk(dir: string): string | undefined {
+      const entries = readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          const found = walk(full)
+          if (found) return found
+        } else if (entry.isFile()) {
+          if (entry.name.toLowerCase() === 'main.scene.json') {
+            return full
+          }
+          if (!fallback && (entry.name.endsWith('.scene.json') || entry.name.endsWith('.scene'))) {
+            fallback = full
+          }
+        }
+      }
+      return undefined
+    }
+    const found_main = walk(assets_dir)
+    if (found_main) return found_main
+    if (fallback) return fallback
+  }
+
+  const legacy = join(project, 'scenes', 'main.scene.json')
+  if (existsSync(legacy)) return legacy
+  return undefined
+}
+
+const scene_path = find_scene_path(project_path)
+if (!scene_path) {
+  console.error(`Could not find a scene file in ${project_path} (checked assets/ and scenes/)`)
+  process.exit(1)
+}
+
 const scene_text = await readFile(scene_path, 'utf8')
 const engine = await create_engine()
 const problem = engine.Server.load_scene(scene_text)
