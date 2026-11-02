@@ -146,13 +146,13 @@ const server = {
       engine.World.add_component(id, 'sprite')
       engine.World.set_sprite(id, options.sprite ?? '', options.order ?? 10)
       if (options.sprite_layers) {
-        const set_layer = (
+        const set_sprite_layer = (
           engine.World as unknown as {
             set_sprite_layer?: (id: string, name: string, texture: string, order: number) => void
           }
         ).set_sprite_layer
         for (const layer of options.sprite_layers) {
-          set_layer?.(id, layer.name, layer.texture, layer.order ?? 0)
+          set_sprite_layer?.(id, layer.name, layer.texture, layer.order ?? 0)
         }
       }
     }

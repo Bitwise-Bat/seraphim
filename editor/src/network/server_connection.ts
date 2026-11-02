@@ -6,29 +6,29 @@ const send_interval_ms = 1000 / 60
 // Matches the server, which sends a snapshot every third 60 Hz tick.
 const snapshot_interval = 3 / 60
 
-type sprite_layer_payload = {
+type SpriteLayerPayload = {
   name: string
   texture: string
   order?: number
 }
 
-type spawned_entity_payload = {
+type SpawnedEntityPayload = {
   id: string
   name: string
   owner_id?: number
   position?: [number, number]
   sprite?: string
-  sprite_layers?: sprite_layer_payload[]
+  sprite_layers?: SpriteLayerPayload[]
   order?: number
   animation_set?: string
 }
 
-type snapshot_entity = { id: string; position: [number, number]; rotation: number; clip: string, scale: [number, number] }
+type SnapshotEntity = { id: string; position: [number, number]; rotation: number; clip: string, scale: [number, number] }
 
-type placement = { x: number; y: number; rotation: number; scale_x: number; scale_y: number }
+type Placement = { x: number; y: number; rotation: number; scale_x: number; scale_y: number }
 
 // Where a networked entity was drawn when the last snapshot came, where that snapshot puts it, and how far along it is.
-type interpolation = {
+type Interpolation = {
   from: [number, number]
   to: [number, number]
   from_rotation: number
@@ -71,13 +71,13 @@ export function connect_to_server(engine: MainModule): ServerConnection {
   })
 
   // Snapshots come at a lower rate than frames, so each frame slides the entities toward the latest one.
-  const interpolations = new Map<string, interpolation>()
+  const interpolations = new Map<string, Interpolation>()
   let last = performance.now()
   const step = (now: number) => {
-    const dt = (now - last) / 1000
+    const delta = (now - last) / 1000
     last = now
     for (const [id, state] of interpolations) {
-      state.alpha = Math.min(state.alpha + dt / snapshot_interval, 1)
+      state.alpha = Math.min(state.alpha + delta / snapshot_interval, 1)
       const x = lerp(state.from[0], state.to[0], state.alpha)
       const y = lerp(state.from[1], state.to[1], state.alpha)
       const rotation = lerp_angle(state.from_rotation, state.to_rotation, state.alpha)
@@ -90,8 +90,8 @@ export function connect_to_server(engine: MainModule): ServerConnection {
   socket.addEventListener('message', (event) => {
     let message: {
       type?: string
-      entities?: snapshot_entity[]
-      entity?: spawned_entity_payload
+      entities?: SnapshotEntity[]
+      entity?: SpawnedEntityPayload
       id?: string
       player_id?: number
       clip?: string
@@ -152,14 +152,14 @@ export function connect_to_server(engine: MainModule): ServerConnection {
       engine.World.set_transform(message.id, -99999, -99999, 0, 0, 0)
     } else if (message.type === 'snapshot' && message.entities) {
       for (const entity of message.entities) {
-        let current = engine.World.get_transform(entity.id) as placement | null
+        let current = engine.World.get_transform(entity.id) as Placement | null
         if (!current) {
           const world_any = engine.World as unknown as { create_entity_with_id?: (name: string, id: string) => string }
           if (world_any.create_entity_with_id) {
             world_any.create_entity_with_id('networked_entity', entity.id)
             engine.World.add_component(entity.id, 'transform')
             engine.World.add_component(entity.id, 'networked')
-            current = engine.World.get_transform(entity.id) as placement | null
+            current = engine.World.get_transform(entity.id) as Placement | null
           }
         }
         if (entity.clip){

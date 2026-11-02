@@ -169,7 +169,7 @@ export function create_world_api(world: World, tick_seconds: number) {
       world.set_sprite(this.id, sprite, order)
     }
     
-    set_layer(name: string, texture: string, order = 0) {
+    set_sprite_layer(name: string, texture: string, order = 0) {
       const fn = (
         world as unknown as {
           set_sprite_layer?: (id: string, name: string, texture: string, order: number) => void
@@ -178,7 +178,7 @@ export function create_world_api(world: World, tick_seconds: number) {
       fn?.(this.id, name, texture, order)
     }
 
-    remove_layer(name: string) {
+    remove_sprite_layer(name: string) {
       const fn = (
         world as unknown as {
           remove_sprite_layer?: (id: string, name: string) => void

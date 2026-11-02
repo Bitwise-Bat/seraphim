@@ -83,8 +83,8 @@ export const script_types = {
   export class Sprite {
     private readonly id: string
     set_sprite(sprite: string, order?: number): void
-    set_layer(name: string, texture: string, order?: number): void
-    remove_layer(name: string): void
+    set_sprite_layer(name: string, texture: string, order?: number): void
+    remove_sprite_layer(name: string): void
   }
 
   export class Entity {
@@ -217,8 +217,8 @@ export const script_types = {
   export const net: {
     // Sends an event to the game server, where server.on handlers receive it. The data travels as JSON.
     send(name: string, data?: unknown): void
-    on(name: string, cb: (data: unknown) => void): void
-    off(name: string, cb: (data: unknown) => void): void
+    on(name: string, handler: (data: unknown) => void): void
+    off(name: string, handler: (data: unknown) => void): void
   }
 
   export type UITag = {
@@ -237,13 +237,13 @@ export const script_types = {
     get text(): string
     set img(src: string)
     get img(): string
-    add_child(elem: ui<any>): void
-    remove_child(elem: ui<any>): void
-    remove(elem?: ui<any>): void
+    add_child(child: ui<any>): void
+    remove_child(child: ui<any>): void
+    remove(target?: ui<any>): void
     set input_type(value: K extends 'input' ? string : never)
     get input_type(): K extends 'input' ? string : undefined
-    on(event: string, cb: (data: unknown) => void) : void
-    off(event: string, cb: (data: unknown) => void) : void
+    on(event: string, handler: (data: unknown) => void) : void
+    off(event: string, handler: (data: unknown) => void) : void
     get disabled(): boolean
     set disabled(value: boolean)
   }

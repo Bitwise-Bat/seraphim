@@ -3,7 +3,7 @@ import type { ServerConnection } from '../network/server_connection'
 import { create_world_api, type Vec2 } from '../../../runtime/world_api.ts'
 import { key_codes, type KeyName, mouse_codes, type MouseName } from './keys'
 
-const SERAPHIM_UI_ID = 'seraphim-ui'
+const seraphim_ui_id = 'seraphim-ui'
 
 // Everything exported from the module that scripts import as 'seraphim' in the editor: the shared world API plus what
 // only exists where the game is shown. Adding a capability means adding it here or in runtime/world_api.ts and declaring
@@ -91,8 +91,8 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
 
   const net = {
     send: (name: string, data?: unknown): void => connection.send({ type: 'event', name, data }),
-    on: (type: string, cb: (data: unknown) => void): void => connection.on(type, cb),
-    off: (type: string, cb: (data: unknown) => void): void => connection.off(type, cb),
+    on: (type: string, handler: (data: unknown) => void): void => connection.on(type, handler),
+    off: (type: string, handler: (data: unknown) => void): void => connection.off(type, handler),
   }
 
   function find_entity(name: string): Entity | undefined {
@@ -107,11 +107,11 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
 
   type UITag = {
     div: HTMLDivElement
-    span: HTMLDivElement
-    button: HTMLDivElement
-    input: HTMLDivElement
-    img: HTMLDivElement
-    p: HTMLDivElement
+    span: HTMLSpanElement
+    button: HTMLButtonElement
+    input: HTMLInputElement
+    img: HTMLImageElement
+    p: HTMLParagraphElement
   }
 
   class ui<K extends keyof UITag> {
@@ -131,7 +131,7 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       }
 
       element = document.createElement(this.tag) as UITag[K]
-      if (!element) throw new Error('2')
+      if (!element) throw new Error(`Could not create <${this.tag}> element`)
       main_element.appendChild(element)
       element.id = name
       this.element = element
@@ -155,13 +155,13 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     }
 
     get img(): string {
-      if (this.tag !== 'img') throw new Error('This feature only support img tag')
+      if (this.tag !== 'img') throw new Error('This feature only supports img tag')
       return (this.element as HTMLImageElement).src
     }
 
     set img(src: string) {
       if (this.tag !== 'img') {
-        throw new Error('This feature only support img tag')
+        throw new Error('This feature only supports img tag')
       }
       ;(this.element as HTMLImageElement).src = src
     }
@@ -188,38 +188,38 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       return false
     }
 
-    add_child(elem: ui<any>) {
-      this.element.appendChild(elem.element)
+    add_child(child: ui<any>) {
+      this.element.appendChild(child.element)
     }
 
-    remove_child(elem: ui<any>) {
-      if (elem.element.parentElement === this.element) {
-        this.element.removeChild(elem.element)
+    remove_child(child: ui<any>) {
+      if (child.element.parentElement === this.element) {
+        this.element.removeChild(child.element)
       } else {
-        elem.element.remove()
+        child.element.remove()
       }
     }
 
-    on(event: string, cb: (data: unknown) => void){
-      this.element.addEventListener(event, cb)
+    on(event: string, handler: (data: unknown) => void){
+      this.element.addEventListener(event, handler)
     }
 
-    off(event: string, cb: (data: unknown) => void){
-      this.element.removeEventListener(event, cb)
+    off(event: string, handler: (data: unknown) => void){
+      this.element.removeEventListener(event, handler)
     }
 
-    public remove(elem?: ui<any>) {
-      if (elem) {
-        elem.element.remove()
+    public remove(target?: ui<any>) {
+      if (target) {
+        target.element.remove()
         return
       }
       this.element.remove()
     }
 
     private get main_element() {
-      const el = document.getElementById(SERAPHIM_UI_ID)
-      if (!el) throw new Error(`UI Main Element didnt exists ${SERAPHIM_UI_ID}`)
-      return el
+      const element = document.getElementById(seraphim_ui_id)
+      if (!element) throw new Error(`UI main element does not exist: ${seraphim_ui_id}`)
+      return element
     }
   }
 
