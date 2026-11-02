@@ -1,6 +1,7 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { useStore } from 'zustand'
 import { useAssetFileDrop } from './asset_drag'
+import { color_presets, hex_to_hsv, hsv_to_hex, normalize_hex, to_hex } from './color'
 import { find_file_by_id } from './project/assets'
 import { is_sound_name } from './project/audio'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
@@ -70,6 +71,180 @@ function NumberField({ label, value, step = 0.1, on_change }: NumberFieldProps) 
         }}
       />
     </label>
+  )
+}
+
+type ColorFieldProps = {
+  label?: string
+  value: string
+  on_change: (value: string) => void
+}
+
+function ColorField({ label = 'Color', value, on_change }: ColorFieldProps) {
+  const [open, set_open] = useState(false)
+  const [text, set_text] = useState(value)
+  const [shown_value, set_shown_value] = useState(value)
+  const [hsv, set_hsv] = useState<[number, number, number]>(() => hex_to_hsv(value))
+  const container_ref = useRef<HTMLDivElement>(null)
+
+  if (value !== shown_value) {
+    set_shown_value(value)
+    set_text(value)
+    set_hsv(hex_to_hsv(value))
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function on_pointer_down(event: PointerEvent) {
+      if (!container_ref.current?.contains(event.target as Node)) {
+        set_open(false)
+      }
+    }
+    function on_key_down(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        set_open(false)
+      }
+    }
+    window.addEventListener('pointerdown', on_pointer_down)
+    window.addEventListener('keydown', on_key_down)
+    return () => {
+      window.removeEventListener('pointerdown', on_pointer_down)
+      window.removeEventListener('keydown', on_key_down)
+    }
+  }, [open])
+
+  function apply_hsv(next_hsv: [number, number, number]) {
+    set_hsv(next_hsv)
+    const next_hex = hsv_to_hex(...next_hsv)
+    set_text(next_hex)
+    set_shown_value(next_hex)
+    on_change(next_hex)
+  }
+
+  function apply_hex_input(raw: string) {
+    set_text(raw)
+    const normalized = normalize_hex(raw)
+    if (normalized) {
+      set_shown_value(normalized)
+      set_hsv(hex_to_hsv(normalized))
+      on_change(normalized)
+    }
+  }
+
+  function update_sv_from_pointer(event: ReactPointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const s = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    const v = Math.max(0, Math.min(1, 1 - (event.clientY - rect.top) / rect.height))
+    apply_hsv([hsv[0], s, v])
+  }
+
+  function update_hue_from_pointer(event: ReactPointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+    apply_hsv([ratio * 360, hsv[1], hsv[2]])
+  }
+
+  const [h, s, v] = hsv
+  const current_hex = normalize_hex(text) ?? shown_value
+
+  return (
+    <div ref={container_ref} className="relative flex flex-1 items-center gap-1.5 min-w-0">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => set_open((prev) => !prev)}
+        className="w-6 h-6 rounded border border-border shrink-0 cursor-pointer shadow-inner transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+        style={{ backgroundColor: current_hex }}
+      />
+      <input
+        type="text"
+        aria-label={`${label} hex`}
+        value={text}
+        spellCheck={false}
+        onChange={(e) => apply_hex_input(e.target.value)}
+        onBlur={() => set_text(current_hex)}
+        className="w-20 min-w-0 px-1.5 py-0.5 border border-border rounded bg-background text-text font-mono text-xs focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-1 transition-colors"
+      />
+      {open && (
+        <div
+          role="dialog"
+          aria-label={`${label} picker`}
+          className="absolute top-full left-0 mt-1.5 z-50 w-48 p-2.5 bg-panel border border-border rounded-lg shadow-[0_10px_28px_rgba(0,0,0,0.65)] flex flex-col gap-2.5 select-none"
+        >
+          <div
+            className="relative w-full h-28 rounded border border-border cursor-crosshair overflow-hidden touch-none"
+            style={{
+              backgroundColor: `hsl(${h}, 100%, 50%)`,
+              backgroundImage: 'linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent)',
+            }}
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId)
+              update_sv_from_pointer(e)
+            }}
+            onPointerMove={(e) => {
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                update_sv_from_pointer(e)
+              }
+            }}
+          >
+            <div
+              className="absolute w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_3px_rgba(0,0,0,0.9)] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ left: `${s * 100}%`, top: `${(1 - v) * 100}%`, backgroundColor: current_hex }}
+            />
+          </div>
+
+          <div
+            className="relative w-full h-3 rounded-full border border-border cursor-pointer touch-none"
+            style={{
+              background:
+                'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+            }}
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId)
+              update_hue_from_pointer(e)
+            }}
+            onPointerMove={(e) => {
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                update_hue_from_pointer(e)
+              }
+            }}
+          >
+            <div
+              className="absolute top-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_3px_rgba(0,0,0,0.9)] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ left: `${(h / 360) * 100}%`, backgroundColor: `hsl(${h}, 100%, 50%)` }}
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.7rem] font-mono text-text-muted uppercase">Hex</span>
+            <input
+              type="text"
+              value={text}
+              spellCheck={false}
+              onChange={(e) => apply_hex_input(e.target.value)}
+              onBlur={() => set_text(current_hex)}
+              className="flex-1 min-w-0 px-1.5 py-0.5 border border-border rounded bg-background text-text font-mono text-xs focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-1"
+            />
+          </div>
+
+          <div className="grid grid-cols-8 gap-1 pt-1 border-t border-border">
+            {color_presets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                title={preset}
+                onClick={() => apply_hex_input(preset)}
+                className={`w-full aspect-square rounded-sm border cursor-pointer transition-transform hover:scale-110 ${
+                  current_hex.toLowerCase() === preset ? 'border-accent ring-1 ring-accent' : 'border-border'
+                }`}
+                style={{ backgroundColor: preset }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -170,12 +345,6 @@ function TransformFields({ value, on_change }: { value: Transform; on_change: (v
   )
 }
 
-function to_hex(channel: number): string {
-  return Math.round(Math.min(1, Math.max(0, channel)) * 255)
-    .toString(16)
-    .padStart(2, '0')
-}
-
 type AssetFieldProps = {
   store: AssetStoreHook
   // Empty when no asset is set.
@@ -237,13 +406,10 @@ function SpriteFields({ value, on_change }: { value: Sprite; on_change: (value: 
         <VectorFields labels={['W', 'H']} values={value.size} on_change={(size) => on_change({ ...value, size })} />
       </Row>
       <Row label="Color">
-        <input
-          type="color"
-          aria-label="Color"
-          className="w-10 h-6 p-0 border border-border rounded bg-background cursor-pointer"
+        <ColorField
+          label="Color"
           value={`#${to_hex(r)}${to_hex(g)}${to_hex(b)}`}
-          onChange={(event) => {
-            const hex = event.target.value
+          on_change={(hex) => {
             const channel = (offset: number) => parseInt(hex.slice(offset, offset + 2), 16) / 255
             on_change({ ...value, color: [channel(1), channel(3), channel(5), a] })
           }}
@@ -1046,12 +1212,7 @@ function SceneInspector({ document }: { document: SceneDocument }) {
         <VectorFields labels={['X', 'Y']} values={document.gravity} on_change={set_gravity} />
       </Row>
       <Row label="Clear Color">
-        <input
-          type="color"
-          className="w-10 h-6 p-0 border border-border rounded bg-background cursor-pointer"
-          value={document.clear_color}
-          onChange={(v) => set_clear_color(v.target.value)}
-        />
+          <ColorField value={document.clear_color} on_change={set_clear_color} />
       </Row>
       <p className="text-text-muted text-sm mt-2">Select an entity to edit it.</p>
     </section>
