@@ -25,6 +25,7 @@ type SceneStore = {
   add_entity: () => string
   remove_entity: (id: string) => void
   update_entity: (id: string, change: (entity: SceneEntity) => SceneEntity) => void
+  reorder_entity: (source_id: string, target_id?: string, place?: 'before' | 'after') => void
   set_gravity: (gravity: Vec2) => void
   set_clear_color: (color: string) => void
 }
@@ -191,6 +192,23 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
 
     update_entity(id, update) {
       change_entities((entities) => entities.map((entity) => (entity.id === id ? update(entity) : entity)))
+    },
+
+    reorder_entity(source_id, target_id, place = 'before') {
+      if (source_id === target_id) return
+      change_entities((entities) => {
+        const from_index = entities.findIndex((e) => e.id === source_id)
+        if (from_index === -1) return entities
+        const item = entities[from_index]
+        const remaining = entities.filter((e) => e.id !== source_id)
+        if (!target_id) {
+          return [...remaining, item]
+        }
+        const to_index = remaining.findIndex((e) => e.id === target_id)
+        if (to_index === -1) return [...remaining, item]
+        const insert_at = place === 'after' ? to_index + 1 : to_index
+        return [...remaining.slice(0, insert_at), item, ...remaining.slice(insert_at)]
+      })
     },
 
     set_gravity(gravity) {
