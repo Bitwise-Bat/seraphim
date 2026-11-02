@@ -15,7 +15,7 @@ void animation_system::resolve(entt::registry& registry, asset::asset_manager& a
             state.handle = assets.load_animation_set(state.animation_set);
 }
 
-void animation_system::update(entt::registry& registry, asset::asset_manager& assets, float dt)
+void animation_system::update(entt::registry& registry, asset::asset_manager& assets, float delta)
 {
     for (const auto [entity, state, image] : registry.view<animator, sprite>().each())
     {
@@ -28,7 +28,7 @@ void animation_system::update(entt::registry& registry, asset::asset_manager& as
             continue;
 
         const std::size_t last = clip->frames.size() - 1;
-        state.elapsed += dt;
+        state.elapsed += delta;
         while (state.elapsed >= clip->frame_duration)
         {
             state.elapsed -= clip->frame_duration;
