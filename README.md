@@ -65,9 +65,8 @@ Each game project created or opened in the editor is a folder on disk with the f
 ```text
 my-game/
 ├── project.json       # Project manifest and format version
-├── assets/            # Sprites, audio, tilesets, animations (with .meta files)
+├── assets/            # Sprites, audio, tilesets, scenes (.scene.json) with .meta files
 ├── scripts/           # TypeScript game scripts extending seraphim.Script
-├── scenes/            # Scene definitions (main.scene.json)
 └── .seraphim/         # Generated type declarations and server bundle (gitignored)
 ```
 

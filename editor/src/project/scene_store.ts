@@ -2,19 +2,24 @@ import type { MainModule } from 'seraphim/seraphim.js'
 import { create } from 'zustand'
 import { connect_to_server, type ServerConnection } from '../network/server_connection'
 import { start_scripts, type ScriptRun } from '../scripting/script_host'
-import { useScriptStore } from './asset_store'
+import { useAssetStore, useScriptStore } from './asset_store'
+import type { AssetFile } from './assets'
 import { component_defaults, type SceneDocument, type SceneEntity, type Vec2 } from './scene_document'
-import { read_main_scene, write_main_scene } from './scenes'
+import { get_main_scene, main_scene_file, write_main_scene } from './scenes'
 
 type SceneStore = {
   document?: SceneDocument
   selected?: string
+  current_scene_name: string
+  current_scene_path?: string
+  current_scene_handle?: FileSystemFileHandle
   // True while the document has changes that are not saved to disk.
   dirty: boolean
   // While true the engine simulates the scene and the document is frozen, so stopping restores it as it was.
   playing: boolean
   error?: string
   open: (project: FileSystemDirectoryHandle, engine: MainModule) => Promise<void>
+  open_scene_file: (file: AssetFile) => Promise<void>
   close: () => void
   save: () => Promise<void>
   // Compiles and starts the scene's scripts first; fails with an error instead of playing when they do not compile.
@@ -77,24 +82,80 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
   }
 
   return {
+    current_scene_name: main_scene_file,
+    current_scene_path: undefined,
+    current_scene_handle: undefined,
     dirty: false,
     playing: false,
 
     async open(next_project, next_engine) {
       project = next_project
       engine = next_engine
-      set({ document: undefined, selected: undefined, dirty: false, playing: false, error: undefined })
+      set({
+        document: undefined,
+        selected: undefined,
+        dirty: false,
+        playing: false,
+        error: undefined,
+        current_scene_name: main_scene_file,
+        current_scene_path: main_scene_file,
+        current_scene_handle: undefined,
+      })
       try {
-        const text = await read_main_scene(next_project)
+        const { text, handle } = await get_main_scene(next_project)
         const problem = next_engine.Engine.load_scene(text)
         if (problem) {
           set({ error: `The main scene could not be loaded: ${problem}` })
           return
         }
         // The engine fills in missing fields and drops unknown components, so its copy is what the editor edits.
-        set({ document: JSON.parse(next_engine.World.save_scene()) as SceneDocument })
+        set({
+          document: JSON.parse(next_engine.World.save_scene()) as SceneDocument,
+          current_scene_handle: handle,
+          current_scene_name: main_scene_file,
+          current_scene_path: main_scene_file,
+        })
+        void useAssetStore.getState().scan(next_project)
       } catch (error) {
         set({ error: error_message(error) })
+      }
+    },
+
+    async open_scene_file(file) {
+      if (!engine || !project) {
+        return
+      }
+      if (get().playing) {
+        set({ error: 'Cannot switch scenes while simulation is playing. Please stop first.' })
+        return
+      }
+      if (get().dirty) {
+        const should_save = window.confirm(
+          `"${get().current_scene_name}" has unsaved changes. Would you like to save before opening "${file.name}"?`,
+        )
+        if (should_save) {
+          await get().save()
+        }
+      }
+      try {
+        const blob = await file.handle.getFile()
+        const text = await blob.text()
+        const problem = engine.Engine.load_scene(text)
+        if (problem) {
+          set({ error: `The scene could not be loaded: ${problem}` })
+          return
+        }
+        set({
+          document: JSON.parse(engine.World.save_scene()) as SceneDocument,
+          selected: undefined,
+          dirty: false,
+          error: undefined,
+          current_scene_name: file.name,
+          current_scene_path: file.path,
+          current_scene_handle: file.handle,
+        })
+      } catch (error) {
+        set({ error: `Failed to open scene: ${error_message(error)}` })
       }
     },
 
@@ -113,7 +174,15 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         return
       }
       try {
-        await write_main_scene(project, text)
+        const handle = get().current_scene_handle
+        if (handle) {
+          const writable = await handle.createWritable()
+          await writable.write(text)
+          await writable.close()
+        } else {
+          const new_handle = await write_main_scene(project, text)
+          set({ current_scene_handle: new_handle })
+        }
         // Edits made while the file was being written are still unsaved.
         set({ dirty: get().document !== saved, error: undefined })
       } catch (error) {
@@ -168,7 +237,16 @@ export const useSceneStore = create<SceneStore>()((set, get) => {
         engine?.Engine.stop_simulation()
       }
       project = undefined
-      set({ document: undefined, selected: undefined, dirty: false, playing: false, error: undefined })
+      set({
+        document: undefined,
+        selected: undefined,
+        current_scene_name: main_scene_file,
+        current_scene_path: undefined,
+        current_scene_handle: undefined,
+        dirty: false,
+        playing: false,
+        error: undefined,
+      })
     },
 
     select(id) {

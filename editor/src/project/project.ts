@@ -7,7 +7,7 @@ export type ProjectManifest = {
 
 const manifest_file = 'project.json'
 const current_format_version = 1
-const project_folders = ['assets', 'scripts', 'scenes']
+const project_folders = ['assets', 'scripts']
 // The editor keeps generated files such as compiled scripts in .seraphim/, which never belongs in version control.
 const generated_folder = '.seraphim'
 const gitignore = `${generated_folder}/\n`

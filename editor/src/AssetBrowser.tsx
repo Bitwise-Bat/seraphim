@@ -16,6 +16,8 @@ import { find_folder, join_path, type AssetEntry, type AssetFile } from './proje
 import { useSettingsStore } from './settings_store'
 import { useAssetStore, useScriptStore, type AssetStoreHook } from './project/asset_store'
 import { script_template } from './project/scripts'
+import { is_scene_file, scene_template } from './project/scenes'
+import { useSceneStore } from './project/scene_store'
 import { RenameInput } from './RenameInput'
 import { Splitter } from './Splitter'
 import { ImagePreviewDialog } from './ImagePreviewDialog'
@@ -24,12 +26,16 @@ const tree_width_limits = { min: 120, max: 480 }
 
 type NewFile = { label: string; name: string; contents: string }
 
-const folders: { store: AssetStoreHook; hint: string; new_file?: NewFile }[] = [
-  { store: useAssetStore, hint: 'Drop images here, or right-click to create a folder.' },
+const folders: { store: AssetStoreHook; hint: string; new_files?: NewFile[] }[] = [
+  {
+    store: useAssetStore,
+    hint: 'Drop images or scenes here, or right-click to create a scene or folder.',
+    new_files: [scene_template],
+  },
   {
     store: useScriptStore,
     hint: 'Drop .ts or .js files here, or right-click to create a script or folder.',
-    new_file: { label: 'New script', ...script_template },
+    new_files: [{ label: 'New script', ...script_template }],
   },
 ]
 
@@ -137,7 +143,7 @@ export function AssetBrowser() {
         // Renaming and open menus refer to entries of one folder, so switching folders starts afresh.
         key={selected}
         hint={folders[selected].hint}
-        new_file={folders[selected].new_file}
+        new_files={folders[selected].new_files}
         tree={<AssetTree stores={folders.map(({ store }) => store)} selected={selected} on_select={set_selected} />}
         tree_width={tree_width}
         on_tree_resize={set_tree_width}
@@ -148,13 +154,13 @@ export function AssetBrowser() {
 
 type FolderBrowserProps = {
   hint: string
-  new_file?: NewFile
+  new_files?: NewFile[]
   tree: ReactNode
   tree_width: number
   on_tree_resize: Dispatch<SetStateAction<number>>
 }
 
-function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: FolderBrowserProps) {
+function FolderBrowser({ hint, new_files, tree, tree_width, on_tree_resize }: FolderBrowserProps) {
   const folder_name = useBrowserStore((store) => store.folder)
   const root = useBrowserStore((store) => store.root)
   const current_path = useBrowserStore((store) => store.current_path)
@@ -166,6 +172,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   const rename = useBrowserStore((store) => store.rename)
   const remove = useBrowserStore((store) => store.remove)
   const find_id = useBrowserStore((store) => store.find_id)
+  const open_scene_file = useSceneStore((store) => store.open_scene_file)
   const [dragging_files, set_dragging_files] = useState(false)
   const [menu, set_menu] = useState<MenuState>()
   const [renaming, set_renaming] = useState<string>()
@@ -216,7 +223,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
   }
 
   const create_actions: ContextMenuItem[] = [
-    ...(new_file ? [{ label: new_file.label, action: () => void create_new_file(new_file) }] : []),
+    ...(new_files?.map((file) => ({ label: file.label, action: () => void create_new_file(file) })) ?? []),
     { label: 'New folder', action: () => void new_folder() },
   ]
 
@@ -233,7 +240,7 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
     await navigator.clipboard.writeText(id)
   }
 
-  function tile_props(entry: AssetEntry) {
+  function tile_props(entry: AssetEntry, file?: AssetFile) {
     const path = join_path(current_path, entry.name)
 
     return {
@@ -244,6 +251,9 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
         const context_options: ContextMenuItem[] = []
 
         if (entry.kind === 'file') {
+          if (file && is_scene_file(file.name)) {
+            context_options.push({ label: 'Open scene', action: () => void open_scene_file(file) })
+          }
           context_options.push({ label: 'Copy UUID', action: () => copy_uuid(entry, path) })
         }
 
@@ -253,7 +263,13 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
         )
         open_menu(event, context_options)
       },
-      on_rename: (new_name: string) => void rename(entry, new_name),
+      on_rename: (new_name: string) => {
+        void rename(entry, new_name).then(() => {
+          if (useSceneStore.getState().current_scene_name === entry.name) {
+            useSceneStore.setState({ current_scene_name: new_name })
+          }
+        })
+      },
       on_rename_end: () => set_renaming(undefined),
     }
   }
@@ -325,9 +341,15 @@ function FolderBrowser({ hint, new_file, tree, tree_width, on_tree_resize }: Fol
             {folder?.files.map((file) => (
               <li key={file.id}>
                 <AssetTile
-                  {...tile_props({ kind: 'file', name: file.name })}
+                  {...tile_props({ kind: 'file', name: file.name }, file)}
                   thumbnail={<AssetThumbnail file={file} />}
-                  on_double_click={is_image_file(file.name) ? () => set_preview_file(file) : undefined}
+                  on_double_click={
+                    is_image_file(file.name)
+                      ? () => set_preview_file(file)
+                      : is_scene_file(file.name)
+                      ? () => void open_scene_file(file)
+                      : undefined
+                  }
                 />
               </li>
             ))}

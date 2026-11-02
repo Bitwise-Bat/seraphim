@@ -9,6 +9,7 @@ type DropTarget = { id: string; place: 'before' | 'after' }
 
 export function SceneTree() {
   const document = useSceneStore((store) => store.document)
+  const current_scene_name = useSceneStore((store) => store.current_scene_name)
   const selected = useSceneStore((store) => store.selected)
   const dirty = useSceneStore((store) => store.dirty)
   const error = useSceneStore((store) => store.error)
@@ -111,7 +112,7 @@ export function SceneTree() {
     <section className="overflow-auto min-w-0 p-3 bg-panel" aria-label="Scene">
       <header className="flex gap-2 items-center justify-between mb-2">
         <h2 className="overflow-hidden m-0 text-[0.9rem] font-semibold text-ellipsis whitespace-nowrap">
-          {main_scene_file}
+          {current_scene_name || main_scene_file}
           {dirty && <span title="Unsaved changes (Ctrl+S saves)"> •</span>}
         </h2>
         {document && (

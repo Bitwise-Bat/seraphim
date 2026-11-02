@@ -15,7 +15,7 @@ Seraphim 2D is a web-only 2D game engine.
 ### Editor projects
 
 The editor is a hosted web app that keeps each game project in a folder on the user's machine, opened through the File
-System Access API (`showDirectoryPicker`). A project folder holds `project.json`, `assets/`, `scripts/`, `scenes/` and
+System Access API (`showDirectoryPicker`). A project folder holds `project.json`, `assets/`, `scripts/` and
 the editor's generated `.seraphim/` cache.
 
 Known limitation: the File System Access API exists only in Chromium-based browsers (Chrome, Edge, Opera). Firefox and

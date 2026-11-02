@@ -61,7 +61,9 @@ if (!project_path) {
   watched_name = raw_args.slice(1).join(' ') || undefined
 }
 
-const scene_path = join(project_path, 'scenes', 'main.scene.json')
+const asset_scene_path = join(project_path, 'assets', 'main.scene.json')
+const legacy_scene_path = join(project_path, 'scenes', 'main.scene.json')
+const scene_path = existsSync(asset_scene_path) ? asset_scene_path : legacy_scene_path
 const scene_text = await readFile(scene_path, 'utf8')
 const engine = await create_engine()
 const problem = engine.Server.load_scene(scene_text)
