@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <functional>
 #include <unordered_map>
 #include <entt/entity/entity.hpp>
 #include <vector>

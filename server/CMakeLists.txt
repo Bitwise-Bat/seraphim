@@ -1,4 +1,4 @@
-add_executable(seraphim_server native/server_main.cpp)
+add_executable(seraphim_server native/server_main.cpp native/visibility.cpp)
 target_link_libraries(seraphim_server PRIVATE seraphim_world_bindings)
 set_target_properties(seraphim_server PROPERTIES SUFFIX ".mjs" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_link_options(seraphim_server PRIVATE

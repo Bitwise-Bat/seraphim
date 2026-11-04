@@ -262,6 +262,33 @@ const server = {
     }
     broadcast({ type: 'sprite_layer_removed', id: resolved_id, name })
   },
+  set_visibility_enter(cb: (observer: string, target: string) => void | null){
+    engine.Server.set_visibility_enter_handler(cb)
+  },
+  set_visibility_leave(cb: (observer: string, target: string) => void | null){
+    engine.Server.set_visibility_leave_handler(cb)
+  },
+  add_observer(id: string){
+    engine.Server.add_observer(id)
+  },
+  remove_observer(id: string){
+    engine.Server.remove_observer(id)
+  },
+  send_for_relevant(player_id: number, name: string, data: unknown){
+    const entity = engine.World.find_entity(`player_${player_id}`)
+    if (!entity) return
+    
+    const position = engine.World.get_transform(entity)
+    if (!position) return
+
+    const entities = engine.World.get_nearby_entities(position.x, position.y, 10)
+    for (const ent of entities)
+    {
+      const owner_id = engine.World.get_owner_id(ent)
+      if (!owner_id || owner_id === player_id) continue
+      this.send(owner_id, name, data)
+    }
+  },
 }
 
 const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server, db }

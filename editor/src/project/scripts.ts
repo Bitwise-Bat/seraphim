@@ -107,6 +107,7 @@ export const script_types = {
     get sprite(): Sprite | undefined
     set offset(offset: Vec2)
     get offset(): Vec2
+    get owner_id(): number
 
     
     is_local(): boolean
@@ -207,6 +208,11 @@ export const script_types = {
     set_clip(id: string, clip: string): void
     set_sprite_layer(id: string, name: string, texture: string, order?: number): void
     remove_sprite_layer(id: string, name: string): void
+    set_visibility_enter(cb: (observer: string, target: string) => void | null):void
+    set_visibility_leave(cb: (observer: string, target: string) => void | null):void
+    add_observer(id: string): void
+    remove_observer(id: string): void
+    send_for_relevant(player_id: number, name: string, data: unknown): void
   }
   
   export const db: {
