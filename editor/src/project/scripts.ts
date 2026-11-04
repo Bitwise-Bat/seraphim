@@ -175,6 +175,7 @@ export const script_types = {
 
   // Only works on the game server: the players connected right now, in the order they joined.
   export function players(): Player[]
+  export function get_nearby_entities(x: number, y: number, r: number): Entity[]
 
   export type EventHandler = (player: Player, data: unknown) => void
 

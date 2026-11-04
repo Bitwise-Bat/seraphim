@@ -32,6 +32,8 @@ void world::tick(float seconds)
         tick_handler();
     physics->step(scene, seconds, m_dispatcher);
     m_dispatcher.update();
+    
+    update_spatial_grid();
 }
 
 void world::on_collision_enter(const collision_enter& event) const
@@ -54,6 +56,13 @@ void world::on_collision_leave(const collision_leave& event) const
     if (!first || !second)
         return;
     collision_leave_handler(first->id, first->name, second->id, second->name);
+}
+
+void world::update_spatial_grid()
+{
+    const auto view = scene.registry().view<const transform>();
+    for (const auto [entity, tf] : view.each())
+        m_grid.update(entity, tf.position.x, tf.position.y);
 }
 
 std::optional<std::string> world::find_entity(const std::string& name)

@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "spatial_grid.hpp"
+
 namespace seraphim::scene
 {
 
@@ -63,7 +65,8 @@ class world
     [[nodiscard]] std::optional<glm::uvec2> get_cell_at_coord(const std::string& tilemap_id, glm::vec2 point) const;
     [[nodiscard]] std::optional<glm::vec2> get_cell_center(const std::string& tilemap_id, glm::uvec2 cell) const;
     [[nodiscard]] std::string make_snapshot(glm::vec2 min, glm::vec2 max) const;
-
+    [[nodiscard]] const spatial_grid& grid() const { return m_grid; }
+    
     seraphim::scene::scene scene;
     // Exists only while the scene is simulated, so the editor can edit a scene without it moving.
     std::optional<seraphim::scene::physics_system> physics;
@@ -77,8 +80,10 @@ class world
   private:
     void on_collision_enter(const collision_enter& event) const;
     void on_collision_leave(const collision_leave& event) const;
+    void update_spatial_grid();
 
     entt::dispatcher m_dispatcher;
+    spatial_grid m_grid{50};
 };
 
 inline world* g_world{};

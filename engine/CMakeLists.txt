@@ -19,7 +19,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 # Simulation shared by the browser client and the headless server; nothing here may depend on SDL or WebGPU.
 add_library(seraphim_sim STATIC asset/animation_set_file.cpp asset/tileset_file.cpp core/fixed_timestep.cpp core/log.cpp
-    scene/navigator_grid.cpp scene/physics_system.cpp scene/scene.cpp scene/scene_file.cpp scene/world.cpp)
+    scene/navigator_grid.cpp scene/physics_system.cpp scene/scene.cpp scene/scene_file.cpp scene/spatial_grid.cpp scene/world.cpp)
 target_link_libraries(seraphim_sim PUBLIC box2d::box2d EnTT::EnTT glm::glm-header-only jps::jps nlohmann_json::nlohmann_json)
 target_include_directories(seraphim_sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/generated)
 

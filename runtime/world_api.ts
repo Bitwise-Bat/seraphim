@@ -226,7 +226,7 @@ export function create_world_api(world: World, tick_seconds: number) {
     #tilemap: Tilemap | undefined | null
     #sprite: Sprite | undefined | null
 
-    constructor(id: string, name: string) {
+    constructor(id: string, name = '') {
       this.id = id
       this.name = name
     }
@@ -340,6 +340,17 @@ export function create_world_api(world: World, tick_seconds: number) {
     return new Entity(id, name)
   }
 
+  function get_nearby_entities(x: number, y: number, r: number): Entity[] {
+    const fn = (
+      world as unknown as {
+        get_nearby_entities?: (x: number, y: number, r: number) => string[] | null
+      }
+    ).get_nearby_entities
+    const ids = fn ? fn(x, y, r) : null
+    if (!ids) return []
+    return ids.map((id) => new Entity(id))
+  }
+
   return {
     Entity,
     Script,
@@ -347,6 +358,7 @@ export function create_world_api(world: World, tick_seconds: number) {
     time,
     find_entity,
     create_entity,
+    get_nearby_entities,
     field,
     exported,
     set_script_attach_handler(handler: AttachScriptHandler) {

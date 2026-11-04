@@ -530,6 +530,30 @@ struct world_api
 
         return offset;
     }
+    
+    static emscripten::val get_nearby_entities(float x, float y, float r)
+    {
+        const auto null = emscripten::val::null();
+        
+        if (!g_world)
+            return null;
+        
+        emscripten::val result = emscripten::val::array();
+        const auto& grid = g_world->grid();
+        
+        std::vector<entt::entity> entities;
+        grid.query_radius(x, y, r, entities);
+        
+        for (const auto entity : entities)
+        {
+            if (const auto* ident = g_world->scene.registry().try_get<seraphim::scene::identity>(entity))
+            {
+                result.call<void>("push", ident->id);
+            }
+        }
+        
+        return result;
+    }
 };
 
 } // namespace
@@ -580,5 +604,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("set_collider_size", &world_api::set_collider_size)
         .class_function("get_collider_size", &world_api::get_collider_size)
         .class_function("set_collider_radius", &world_api::set_collider_radius)
-        .class_function("get_collider_radius", &world_api::get_collider_radius);
+        .class_function("get_collider_radius", &world_api::get_collider_radius)
+        .class_function("get_nearby_entities", &world_api::get_nearby_entities);
 }
