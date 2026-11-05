@@ -27,6 +27,8 @@ async function sync(engine: MainModule, root: AssetFolder): Promise<void> {
     const url = URL.createObjectURL(data)
     registered.set(file.id, { url, version })
     engine.Engine.register_asset(file.id, url)
+    engine.Engine.register_asset(file.path, url)
+    engine.Engine.register_asset(`assets/${file.path}`, url)
   }
 
   for (const [id, asset] of registered) {

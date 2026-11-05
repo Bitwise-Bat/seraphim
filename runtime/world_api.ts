@@ -31,6 +31,26 @@ export function create_world_api(world: World, tick_seconds: number) {
   type AttachScriptHandler = ((entity: Entity, script_id: string) => void) | null
   let attach_script_handler: AttachScriptHandler | null = null
 
+  type SceneChangeHandler = ((scene_text: string) => void) | null
+  let scene_change_handler: SceneChangeHandler | null = null
+
+  type SceneLoader = ((id_or_json: string) => Promise<void> | void) | null
+  let scene_loader: SceneLoader | null = null
+
+  type AssetUrlResolver = ((id: string) => string) | null
+  let asset_url_resolver: AssetUrlResolver | null = null
+
+  async function load_scene(id_or_json: string): Promise<void> {
+    if (!scene_loader) {
+      throw new Error('Scene loader is not configured on this host')
+    }
+    return await scene_loader(id_or_json)
+  }
+
+  function get_asset_url(id: string): string {
+    return asset_url_resolver?.(id) ?? ''
+  }
+
   function read_transform(id: string): EngineTransform {
     return (world.get_transform(id) as EngineTransform | null) ?? identity_transform
   }
@@ -359,10 +379,24 @@ export function create_world_api(world: World, tick_seconds: number) {
     find_entity,
     create_entity,
     get_nearby_entities,
+    load_scene,
+    get_asset_url,
     field,
     exported,
     set_script_attach_handler(handler: AttachScriptHandler) {
       attach_script_handler = handler
+    },
+    set_scene_change_handler(handler: SceneChangeHandler) {
+      scene_change_handler = handler
+    },
+    notify_scene_loaded(scene_text: string) {
+      scene_change_handler?.(scene_text)
+    },
+    set_scene_loader(loader: SceneLoader) {
+      scene_loader = loader
+    },
+    set_asset_url_resolver(resolver: AssetUrlResolver) {
+      asset_url_resolver = resolver
     },
   }
 }

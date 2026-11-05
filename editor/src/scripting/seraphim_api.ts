@@ -104,6 +104,30 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     const id = engine.World.create_entity(name)
     return new Entity(id, name)
   }
+  
+  shared.set_asset_url_resolver((id) => engine.Engine.get_asset_url(id))
+
+  async function load_scene(id_or_json: string): Promise<void> {
+    let json = id_or_json.trim()
+    if (!json.startsWith('{')) {
+      const url = engine.Engine.get_asset_url(id_or_json)
+      if (!url) {
+        throw new Error(`Asset not found: ${id_or_json}`)
+      }
+      const res = await fetch(url)
+      if (!res.ok) {
+        throw new Error(`Failed to fetch scene ${id_or_json} (${res.status} ${res.statusText})`)
+      }
+      json = await res.text()
+    }
+    const err = engine.Engine.load_scene(json)
+    if (err) {
+      throw new Error(`Engine rejected scene: ${err}`)
+    }
+    shared.notify_scene_loaded(json)
+  }
+
+  shared.set_scene_loader(load_scene)
 
   type UITag = {
     div: HTMLDivElement
@@ -225,6 +249,7 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
 
   return {
     ...shared,
+    load_scene,
     Entity,
     find_entity,
     create_entity,

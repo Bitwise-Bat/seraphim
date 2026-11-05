@@ -30,7 +30,23 @@ struct server_api
         auto scene = seraphim::scene::parse_scene(json);
         if (!scene)
             return std::move(scene.error());
+
+        const bool was_simulating = g_server_world && g_server_world->physics.has_value();
+        auto old_tick_handler = g_server_world ? g_server_world->tick_handler : emscripten::val::undefined();
+        auto old_enter_handler = g_server_world ? g_server_world->collision_enter_handler : emscripten::val::undefined();
+        auto old_leave_handler = g_server_world ? g_server_world->collision_leave_handler : emscripten::val::undefined();
+
         g_server_world.emplace(std::move(*scene));
+        seraphim::scene::g_world = &*g_server_world;
+        g_server_world->tick_handler = old_tick_handler;
+        g_server_world->collision_enter_handler = old_enter_handler;
+        g_server_world->collision_leave_handler = old_leave_handler;
+
+        if (was_simulating)
+        {
+            g_server_world->start_simulation();
+        }
+
         return {};
     }
 

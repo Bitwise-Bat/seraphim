@@ -30,6 +30,7 @@ export type ScriptedEntity = {
 
 export type ScriptRun = {
   stop: () => void
+  on_scene_loaded?: (scene_text: string) => void
 }
 
 function load_bundle(code: string, api: WorldApi): Bundle {
@@ -86,7 +87,30 @@ function call_collision(instance: ScriptInstance, hook: CollisionHook, other: En
  */
 export function run_scripts(world: World, api: WorldApi, code: string, entities: ScriptedEntity[]): ScriptRun {
   const bundle = load_bundle(code, api)
-  const instances: ScriptInstance[] = []
+  let instances: ScriptInstance[] = []
+
+  function instantiate_entities(entity_list: ScriptedEntity[]) {
+    for (const entity of entity_list) {
+      for (const id of entity.components.scripts?.assets ?? []) {
+        const compiled = bundle[id]
+        // Scripts of the other side are left out of this side's bundle.
+        if (!compiled) {
+          continue
+        }
+        const script_class = compiled.script
+        if (typeof script_class !== 'function' || !(script_class.prototype instanceof api.Script)) {
+          throw new Error(`${compiled.path} must have a default export that is a class extending Script`)
+        }
+        const object = new (script_class as new () => InstanceType<WorldApi['Script']>)()
+        object.entity = new api.Entity(entity.id, entity.name)
+        const props = entity.components.scripts?.properties?.[id]
+        if (props && typeof props === 'object') {
+          Object.assign(object, props)
+        }
+        instances.push({ entity_id: entity.id, path: compiled.path, object: object as ScriptObject, failed: false })
+      }
+    }
+  }
 
   function instantiate_and_start(entity: Entity, script_id: string) {
     const compiled = bundle[script_id]
@@ -106,6 +130,26 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
     call(instance, 'on_start')
   }
 
+  function on_scene_loaded(scene_text: string) {
+    for (const instance of [...instances]) {
+      call(instance, 'on_stop')
+    }
+    instances = []
+
+    try {
+      const doc = JSON.parse(scene_text) as { entities?: ScriptedEntity[] }
+      if (Array.isArray(doc.entities)) {
+        instantiate_entities(doc.entities)
+      }
+    } catch (e) {
+      console.error('Failed to parse entities from loaded scene', e)
+    }
+
+    for (const instance of [...instances]) {
+      call(instance, 'on_start')
+    }
+  }
+
   function dispatch_collision(
     hook: CollisionHook,
     id_a: string,
@@ -115,7 +159,7 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
   ): void {
     let entity_a: Entity | undefined
     let entity_b: Entity | undefined
-    for (const instance of instances) {
+    for (const instance of [...instances]) {
       if (instance.entity_id === id_a && instance.object[hook]) {
         entity_b ??= new api.Entity(id_b, name_b)
         call_collision(instance, hook, entity_b)
@@ -126,34 +170,15 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
     }
   }
 
-  for (const entity of entities) {
-    for (const id of entity.components.scripts?.assets ?? []) {
-      const compiled = bundle[id]
-      // Scripts of the other side are left out of this side's bundle.
-      if (!compiled) {
-        continue
-      }
-      const script_class = compiled.script
-      if (typeof script_class !== 'function' || !(script_class.prototype instanceof api.Script)) {
-        throw new Error(`${compiled.path} must have a default export that is a class extending Script`)
-      }
-      const object = new (script_class as new () => InstanceType<WorldApi['Script']>)()
-      object.entity = new api.Entity(entity.id, entity.name)
-      const props = entity.components.scripts?.properties?.[id]
-      if (props && typeof props === 'object') {
-        Object.assign(object, props)
-      }
-      instances.push({ entity_id: entity.id, path: compiled.path, object: object as ScriptObject, failed: false })
-    }
-  }
-
+  instantiate_entities(entities)
   api.set_script_attach_handler(instantiate_and_start)
+  api.set_scene_change_handler(on_scene_loaded)
 
-  for (const instance of instances) {
+  for (const instance of [...instances]) {
     call(instance, 'on_start')
   }
   world.set_tick_handler(() => {
-    for (const instance of instances) {
+    for (const instance of [...instances]) {
       call(instance, 'on_tick')
     }
     api.time.tick += 1
@@ -168,6 +193,7 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
   return {
     stop() {
       api.set_script_attach_handler(null)
+      api.set_scene_change_handler(null)
       world.set_tick_handler(null)
       world.set_collision_enter_handler(null)
       world.set_collision_leave_handler(null)
@@ -175,5 +201,6 @@ export function run_scripts(world: World, api: WorldApi, code: string, entities:
         call(instance, 'on_stop')
       }
     },
+    on_scene_loaded,
   }
 }

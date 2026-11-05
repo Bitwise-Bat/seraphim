@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import create_engine from '../../build/web-debug/seraphim_server.mjs'
@@ -289,9 +289,77 @@ const server = {
       this.send(owner_id, name, data)
     }
   },
+  load_scene(id: string): Promise<void> {
+    return server_load_scene(id)
+  },
 }
 
-const api = { ...create_world_api(engine.World, tick_ms / 1000), players: players.list, server, db }
+const asset_cache = new Map<string, string>()
+const assets_folder_path = join(project_path!, 'assets')
+
+function find_asset_file_by_id(dir: string, id: string): string | undefined {
+  if (asset_cache.has(id)) {
+    const cached = asset_cache.get(id)!
+    if (existsSync(cached)) return cached
+    asset_cache.delete(id)
+  }
+
+  function walk(current: string): string | undefined {
+    if (!existsSync(current)) return undefined
+    const entries = readdirSync(current, { withFileTypes: true })
+    for (const entry of entries) {
+      const full = join(current, entry.name)
+      if (entry.isDirectory()) {
+        const found = walk(full)
+        if (found) return found
+      } else if (entry.isFile() && entry.name.endsWith('.meta')) {
+        try {
+          const meta = JSON.parse(readFileSync(full, 'utf8')) as { id?: string }
+          if (meta.id) {
+            const asset_path = full.slice(0, -5)
+            asset_cache.set(meta.id, asset_path)
+            if (meta.id === id) return asset_path
+          }
+        } catch {}
+      }
+    }
+    return undefined
+  }
+
+  return walk(dir)
+}
+
+async function server_load_scene(id_or_json: string): Promise<void> {
+  let json = id_or_json.trim()
+  if (!json.startsWith('{')) {
+    const candidates = [
+      id_or_json,
+      join(project_path!, id_or_json),
+      join(assets_folder_path, id_or_json),
+    ]
+    let found_path = candidates.find((c) => existsSync(c) && !c.endsWith('.meta'))
+    if (!found_path) {
+      found_path = find_asset_file_by_id(assets_folder_path, id_or_json)
+    }
+    if (!found_path) {
+      throw new Error(`Scene asset not found: ${id_or_json}`)
+    }
+    json = await readFile(found_path, 'utf8')
+  }
+
+  const err = engine.Server.load_scene(json)
+  if (err) {
+    throw new Error(`Server rejected scene: ${err}`)
+  }
+  spawned_entities.clear()
+  world_api.notify_scene_loaded(json)
+}
+
+const world_api = create_world_api(engine.World, tick_ms / 1000)
+world_api.set_scene_loader(server_load_scene)
+world_api.set_asset_url_resolver((id) => find_asset_file_by_id(assets_folder_path, id) ?? '')
+
+const api = { ...world_api, players: players.list, server, db }
 run_scripts(engine.World, api, code, entities)
 
 engine.Server.start_simulation()

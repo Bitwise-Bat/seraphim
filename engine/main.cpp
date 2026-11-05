@@ -65,6 +65,14 @@ struct engine_api
         g_app->sources.set(std::move(id), std::move(url));
     }
 
+    static std::string get_asset_url(const std::string& id)
+    {
+        if (!g_app)
+            return {};
+        const auto* url = g_app->sources.find(id);
+        return url ? *url : std::string{};
+    }
+
     // Replaces the running scene. Returns why the scene was rejected, or an empty string once it is loaded; a rejected
     // scene leaves the running one untouched.
     static std::string load_scene(const std::string& json)
@@ -79,9 +87,23 @@ struct engine_api
         // The voices belong to the old scene's entities.
         seraphim::platform::stop_all_voices();
         g_app->camera_target.clear();
+
+        const bool was_simulating = g_app->world && g_app->world->physics.has_value();
+        auto old_tick_handler = g_app->world ? g_app->world->tick_handler : emscripten::val::undefined();
+        auto old_enter_handler = g_app->world ? g_app->world->collision_enter_handler : emscripten::val::undefined();
+        auto old_leave_handler = g_app->world ? g_app->world->collision_leave_handler : emscripten::val::undefined();
+
         g_app->world.emplace(std::move(*scene));
         seraphim::scene::g_world = &*g_app->world;
+        g_app->world->tick_handler = old_tick_handler;
+        g_app->world->collision_enter_handler = old_enter_handler;
+        g_app->world->collision_leave_handler = old_leave_handler;
         g_app->renderer.set_clear_color(seraphim::core::color::from_hex(scene->clear_color().to_hex()));
+
+        if (was_simulating)
+        {
+            g_app->world->start_simulation();
+        }
 
         if (g_app->assets)
         {
@@ -312,6 +334,7 @@ EMSCRIPTEN_BINDINGS(seraphim)
 {
     emscripten::class_<engine_api>("Engine")
         .class_function("register_asset", &engine_api::register_asset)
+        .class_function("get_asset_url", &engine_api::get_asset_url)
         .class_function("load_scene", &engine_api::load_scene)
         .class_function("tick_seconds", &engine_api::tick_seconds)
         .class_function("is_key_down", &engine_api::is_key_down)

@@ -174,6 +174,9 @@ export const script_types = {
     readonly input: { is_down(key: Key): boolean }
   }
 
+  export function load_scene(id: string): Promise<void>
+  export function get_asset_url(id: string): string
+  
   // Only works on the game server: the players connected right now, in the order they joined.
   export function players(): Player[]
   export function get_nearby_entities(x: number, y: number, r: number): Entity[]
@@ -213,6 +216,7 @@ export const script_types = {
     add_observer(id: string): void
     remove_observer(id: string): void
     send_for_relevant(player_id: number, name: string, data: unknown): void
+    load_scene(id: string): Promise<void>
   }
   
   export const db: {
