@@ -554,6 +554,21 @@ struct world_api
         
         return result;
     }
+    
+    static emscripten::val get_entities_in_area(float start_x, float start_y, float width, float height)
+    {
+        auto null = emscripten::val::null();
+        if (!g_world)
+            return null;
+        
+        auto result = emscripten::val::array();
+        for (const auto& [entity, tf] : g_world->scene.registry().view<seraphim::scene::transform>().each() )
+            if (tf.position.x > start_x && tf.position.x < start_x + width && tf.position.y > start_y && tf.position.y < start_y + height)
+                if (const auto id = g_world->scene.get_uuid(entity))
+                    result.call<void>("push", *id);
+        
+        return result;
+    }
 };
 
 } // namespace
@@ -605,5 +620,6 @@ EMSCRIPTEN_BINDINGS(world)
         .class_function("get_collider_size", &world_api::get_collider_size)
         .class_function("set_collider_radius", &world_api::set_collider_radius)
         .class_function("get_collider_radius", &world_api::get_collider_radius)
-        .class_function("get_nearby_entities", &world_api::get_nearby_entities);
+        .class_function("get_nearby_entities", &world_api::get_nearby_entities)
+        .class_function("get_entities_in_area", &world_api::get_entities_in_area);
 }

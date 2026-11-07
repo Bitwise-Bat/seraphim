@@ -22,4 +22,10 @@ entt::entity scene::find(std::string_view id) const
     return entt::null;
 }
 
+std::optional<std::string> scene::get_uuid(entt::entity entity) const
+{
+    if (const auto* entity_identity = m_registry.try_get<identity>(entity))
+        return entity_identity->id;
+    return std::nullopt;
+}
 } // namespace seraphim::scene

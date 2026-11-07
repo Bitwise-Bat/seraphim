@@ -3,9 +3,12 @@ import type { MainModule } from '../build/web-debug/seraphim.js'
 // The part of the 'seraphim' module that works wherever a world runs: in the editor and on the server. Each host adds
 // its own capabilities on top, such as the editor's camera and input.
 
-export type World = MainModule['World']
+export type World = Omit<MainModule['World'], 'get_entities_in_area'> & {
+  get_entities_in_area?: (x: number, y: number, w: number, h: number) => string[] | null
+}
 
 export type Vec2 = [number, number]
+export type MouseButton = 'left' | 'middle' | 'right' | 'back' | 'forward'
 
 type EngineTransform = {
   x: number
@@ -370,6 +373,25 @@ export function create_world_api(world: World, tick_seconds: number) {
     if (!ids) return []
     return ids.map((id) => new Entity(id))
   }
+  
+  function get_entities_in_area(x: number, y: number, w: number, h: number): Entity[] {
+    const fn = world.get_entities_in_area
+    const entities = fn ? fn(x, y, w, h) : null
+    if (!entities) return []
+    return entities.map((entity: string) => new Entity(entity))
+  }
+  
+  function was_mouse_released(_button: MouseButton): boolean {
+    return false
+  }
+
+  function was_mouse_pressed(_button: MouseButton): boolean {
+    return false
+  }
+
+  function is_mouse_down(_button: MouseButton): boolean {
+    return false
+  }
 
   return {
     Entity,
@@ -379,6 +401,10 @@ export function create_world_api(world: World, tick_seconds: number) {
     find_entity,
     create_entity,
     get_nearby_entities,
+    get_entities_in_area,
+    was_mouse_released,
+    was_mouse_pressed,
+    is_mouse_down,
     load_scene,
     get_asset_url,
     field,

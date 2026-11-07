@@ -73,6 +73,10 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     },
   }
 
+  const is_mouse_down = (button: MouseName): boolean => api.is_mouse_down(mouse_codes[button])
+  const was_mouse_pressed = (button: MouseName): boolean => api.was_mouse_pressed(mouse_codes[button])
+  const was_mouse_released = (button: MouseName): boolean => api.was_mouse_released(mouse_codes[button])
+
   const input = {
     is_down: (key: KeyName): boolean => api.is_key_down(key_codes[key]),
     was_pressed: (key: KeyName): boolean => api.was_key_pressed(key_codes[key]),
@@ -255,6 +259,9 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     create_entity,
     camera,
     input,
+    is_mouse_down,
+    was_mouse_pressed,
+    was_mouse_released,
     net,
     ui,
   }

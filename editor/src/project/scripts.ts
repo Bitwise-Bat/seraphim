@@ -133,6 +133,10 @@ export const script_types = {
   // Writes to the browser console, labelled with the calling script.
   export function log(...values: unknown[]): void
 
+  export function is_mouse_down(button: MouseButton): boolean
+  export function was_mouse_pressed(button: MouseButton): boolean
+  export function was_mouse_released(button: MouseButton): boolean
+
   // Keys follow the physical layout. Presses and releases are seen by the first tick after they happen.
   export const input: {
     is_down(key: Key): boolean
@@ -275,6 +279,7 @@ export const script_types = {
 
   export function exported(options: FieldOptions): any
   export function exported(target: any, context?: any): any
+  function get_entities_in_area(x: number, y: number, w: number, h: number): Entity[]
 }
 `,
 }

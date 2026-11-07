@@ -18,6 +18,7 @@ class scene
 
     // Returns entt::null when no entity has the id.
     [[nodiscard]] entt::entity find(std::string_view id) const;
+    [[nodiscard]] std::optional<std::string> get_uuid(entt::entity entity) const;
 
     [[nodiscard]] entt::registry& registry() { return m_registry; }
     [[nodiscard]] const entt::registry& registry() const { return m_registry; }
