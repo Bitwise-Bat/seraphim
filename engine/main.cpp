@@ -176,28 +176,21 @@ struct engine_api
                g_app->input.was_released(static_cast<seraphim::platform::mouse_button>(button));
     }
 
-    // SDL reports the cursor in window coordinates, while the camera maps canvas pixels, which differ on high-DPI
-    // screens.
+    // Canvas backing store pixels, the same space screen_to_world takes.
     static emscripten::val get_mouse_position()
     {
-        const auto null = emscripten::val::null();
+        const auto cursor = canvas_cursor();
+        if (!cursor)
+            return emscripten::val::null();
+        return to_point(*cursor);
+    }
 
-        if (!g_app)
-            return null;
-
-        int width = 0;
-        int height = 0;
-        if (!SDL_GetWindowSize(g_app->window.get(), &width, &height) || width == 0 || height == 0)
-            return null;
-
-        const glm::vec2 viewport = g_app->renderer.viewport_size();
-        const glm::vec2 cursor{g_app->input.mouse_x(), g_app->input.mouse_y()};
-        const glm::vec2 world = g_app->camera.screen_to_world(cursor * viewport / glm::vec2{width, height}, viewport);
-
-        auto result = emscripten::val::object();
-        result.set("x", world.x);
-        result.set("y", world.y);
-        return result;
+    static emscripten::val get_mouse_world_position()
+    {
+        const auto cursor = canvas_cursor();
+        if (!cursor)
+            return emscripten::val::null();
+        return to_point(g_app->camera.screen_to_world(*cursor, g_app->renderer.viewport_size()));
     }
 
     // Takes pixels from the top-left corner of the canvas backing store, not CSS pixels.
@@ -324,6 +317,29 @@ struct engine_api
     }
 
   private:
+    static emscripten::val to_point(glm::vec2 point)
+    {
+        auto result = emscripten::val::object();
+        result.set("x", point.x);
+        result.set("y", point.y);
+        return result;
+    }
+
+    // SDL reports the cursor in window coordinates, while the canvas backing store can differ on high-DPI screens.
+    static std::optional<glm::vec2> canvas_cursor()
+    {
+        if (!g_app)
+            return std::nullopt;
+
+        int width = 0;
+        int height = 0;
+        if (!SDL_GetWindowSize(g_app->window.get(), &width, &height) || width == 0 || height == 0)
+            return std::nullopt;
+
+        const glm::vec2 cursor{g_app->input.mouse_x(), g_app->input.mouse_y()};
+        return cursor * g_app->renderer.viewport_size() / glm::vec2{width, height};
+    }
+
     static bool is_scancode(int value) { return value > SDL_SCANCODE_UNKNOWN && value < SDL_SCANCODE_COUNT; }
     static bool is_mouse_button(int value) { return value >= SDL_BUTTON_LEFT && value <= SDL_BUTTON_X2; }
 };
@@ -351,6 +367,7 @@ EMSCRIPTEN_BINDINGS(seraphim)
         .class_function("was_mouse_released", &engine_api::was_mouse_released)
         .class_function("is_mouse_down", &engine_api::is_mouse_down)
         .class_function("get_mouse_position", &engine_api::get_mouse_position)
+        .class_function("get_mouse_world_position", &engine_api::get_mouse_world_position)
         .class_function("has_audio_source", &engine_api::has_audio_source)
         .class_function("play_audio", &engine_api::play_audio)
         .class_function("stop_audio", &engine_api::stop_audio)

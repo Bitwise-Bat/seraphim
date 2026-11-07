@@ -77,6 +77,8 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
   const was_mouse_pressed = (button: MouseName): boolean => api.was_mouse_pressed(mouse_codes[button])
   const was_mouse_released = (button: MouseName): boolean => api.was_mouse_released(mouse_codes[button])
 
+  const to_vec2 = (point: { x: number; y: number } | null): Vec2 => (point ? [point.x, point.y] : [0, 0])
+
   const input = {
     is_down: (key: KeyName): boolean => api.is_key_down(key_codes[key]),
     was_pressed: (key: KeyName): boolean => api.was_key_pressed(key_codes[key]),
@@ -84,13 +86,8 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
     is_mouse_down: (button: MouseName): boolean => api.is_mouse_down(mouse_codes[button]),
     was_mouse_pressed: (button: MouseName): boolean => api.was_mouse_pressed(mouse_codes[button]),
     was_mouse_released: (button: MouseName): boolean => api.was_mouse_released(mouse_codes[button]),
-    get mouse_position(): Vec2 {
-      const position = api.get_mouse_position() as {
-        x: number
-        y: number
-      } | null
-      return position ? [position.x, position.y] : [0, 0]
-    },
+    get_mouse_position: (): Vec2 => to_vec2(api.get_mouse_position()),
+    get_mouse_world_position: (): Vec2 => to_vec2(api.get_mouse_world_position()),
   }
 
   const net = {

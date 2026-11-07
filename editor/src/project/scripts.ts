@@ -145,8 +145,10 @@ export const script_types = {
     is_mouse_down(button: MouseButton): boolean
     was_mouse_pressed(button: MouseButton): boolean
     was_mouse_released(button: MouseButton): boolean
+    // The cursor position in canvas pixels, measured from the top-left corner.
+    get_mouse_position(): Vec2
     // The point under the cursor in world coordinates, so it can be compared with entity positions directly.
-    readonly mouse_position: Vec2
+    get_mouse_world_position(): Vec2
   }
 
   // Only works in the browser; on the game server there is no camera.
