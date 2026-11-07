@@ -7,7 +7,7 @@ export type World = Omit<MainModule['World'], 'get_entities_in_area'> & {
   get_entities_in_area?: (x: number, y: number, w: number, h: number) => string[] | null
 }
 
-export type Vec2 = [number, number]
+export type Vec2 = { readonly x: number; readonly y: number }
 export type MouseButton = 'left' | 'middle' | 'right' | 'back' | 'forward'
 
 type EngineTransform = {
@@ -95,10 +95,10 @@ export function create_world_api(world: World, tick_seconds: number) {
 
     get velocity(): Vec2 {
       const v = world.get_velocity(this.id)
-      return v ? [v.x, v.y] : [0, 0]
+      return v ? { x: v.x, y: v.y } : { x: 0, y: 0 }
     }
 
-    set velocity([x, y]: Vec2) {
+    set velocity({ x, y }: Vec2) {
       world.set_velocity(this.id, x, y)
     }
 
@@ -126,12 +126,12 @@ export function create_world_api(world: World, tick_seconds: number) {
     }
     
     set offset(offset: Vec2) {
-      world.set_collider_offset(this.id, offset[0], offset[1])
+      world.set_collider_offset(this.id, offset.x, offset.y)
     }
     
     get offset() : Vec2 {
       const offset = world.get_collider_offset(this.id)
-      return offset ? [offset.x, offset.y] : [0, 0]
+      return offset ? { x: offset.x, y: offset.y } : { x: 0, y: 0 }
     }
 
     get size(): Vec2 {
@@ -141,7 +141,7 @@ export function create_world_api(world: World, tick_seconds: number) {
         }
       ).get_collider_size
       const result = fn?.(this.id)
-      return result ? [result.x, result.y] : [1, 1]
+      return result ? { x: result.x, y: result.y } : { x: 1, y: 1 }
     }
 
     set size(size: Vec2) {
@@ -150,7 +150,7 @@ export function create_world_api(world: World, tick_seconds: number) {
           set_collider_size?: (id: string, width: number, height: number) => void
         }
       ).set_collider_size
-      fn?.(this.id, size[0], size[1])
+      fn?.(this.id, size.x, size.y)
     }
 
     get collider_size(): Vec2 {
@@ -218,26 +218,19 @@ export function create_world_api(world: World, tick_seconds: number) {
       this.id = id
     }
 
-    find_path([sx, sy]: Vec2, [ex, ey]: Vec2, blocking_layer: number): Vec2[] | undefined {
-      const path = world.find_path(this.id, blocking_layer, sx, sy, ex, ey) as { x: number; y: number }[] | null
-      return path?.map(({ x, y }): Vec2 => [x, y])
+    find_path(start: Vec2, end: Vec2, blocking_layer: number): Vec2[] | undefined {
+      const path = world.find_path(this.id, blocking_layer, start.x, start.y, end.x, end.y) as Vec2[] | null
+      return path?.map(({ x, y }): Vec2 => ({ x, y }))
     }
 
-    // The engine answers with an { x, y } object, but scripts pass cells straight back into find_path as Vec2.
     get_cell_at_coord(x: number, y: number): Vec2 | undefined {
-      const cell = world.get_cell_at_coord(this.id, x, y) as {
-        x: number
-        y: number
-      } | null
-      return cell ? [cell.x, cell.y] : undefined
+      const cell = world.get_cell_at_coord(this.id, x, y) as Vec2 | null
+      return cell ? { x: cell.x, y: cell.y } : undefined
     }
 
-    get_cell_center([x, y]: Vec2): Vec2 | undefined {
-      const center = world.get_cell_center(this.id, x, y) as {
-        x: number
-        y: number
-      } | null
-      return center ? [center.x, center.y] : undefined
+    get_cell_center(cell: Vec2): Vec2 | undefined {
+      const center = world.get_cell_center(this.id, cell.x, cell.y) as Vec2 | null
+      return center ? { x: center.x, y: center.y } : undefined
     }
   }
 
@@ -303,10 +296,10 @@ export function create_world_api(world: World, tick_seconds: number) {
 
     get position(): Vec2 {
       const { x, y } = read_transform(this.id)
-      return [x, y]
+      return { x, y }
     }
 
-    set position([x, y]: Vec2) {
+    set position({ x, y }: Vec2) {
       write_transform(this.id, { ...read_transform(this.id), x, y })
     }
 
@@ -320,14 +313,14 @@ export function create_world_api(world: World, tick_seconds: number) {
 
     get scale(): Vec2 {
       const { scale_x, scale_y } = read_transform(this.id)
-      return [scale_x, scale_y]
+      return { x: scale_x, y: scale_y }
     }
 
-    set scale([scale_x, scale_y]: Vec2) {
+    set scale({ x, y }: Vec2) {
       write_transform(this.id, {
         ...read_transform(this.id),
-        scale_x,
-        scale_y,
+        scale_x: x,
+        scale_y: y,
       })
     }
   }

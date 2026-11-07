@@ -23,7 +23,7 @@ export const script_types = {
   name: 'seraphim.d.ts',
   contents: `declare module 'seraphim' {
   // Read-only, so that changing one element of a copy, which would not move anything, is a type error.
-  export type Vec2 = readonly [number, number]
+  export type Vec2 = { readonly x: number; readonly y: number }
 
   export type Key = ${Object.keys(key_codes)
       .map((key) => `'${key}'`)
@@ -36,7 +36,7 @@ export const script_types = {
   export class Body {
     private readonly id: string
     get velocity(): Vec2
-    set velocity([x, y]: Vec2)
+    set velocity(velocity: Vec2)
     set fixed_rotation(enabled: boolean)
     get fixed_rotation(): boolean
     // Box2D collision filtering: [0] = category_bits (what layer this is), [1] = mask_bits (what layers it collides with)
@@ -95,7 +95,7 @@ export const script_types = {
     #tilemap: Tilemap | undefined | null
     #audio: AudioSource | undefined | null
     #sprite: Sprite | undefined | null
-    // Each read returns a copy, so assign a whole new value to move the entity: entity.position = [x, y].
+    // Each read returns a copy, so assign a whole new value to move the entity: entity.position = { x, y }.
     position: Vec2
     // Counter-clockwise, in radians.
     rotation: number
@@ -153,9 +153,9 @@ export const script_types = {
 
   // Only works in the browser; on the game server there is no camera.
   export const camera: {
-    // Each read returns a copy, so assign a whole new value to move it: camera.position = [x, y].
+    // Each read returns a copy, so assign a whole new value to move it: camera.position = { x, y }.
     position: Vec2
-    screen_to_world(x: number, y: number): { x: number; y: number }
+    screen_to_world(x: number, y: number): Vec2
     // Keeps the camera on the entity every frame until Play stops; undefined lets go of it.
     follow(entity: Entity | undefined): void
     set view_height(view_height: number)

@@ -52,9 +52,9 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
   const camera = {
     get position(): Vec2 {
       const { x, y } = api.get_camera() as { x: number; y: number }
-      return [x, y]
+      return { x, y }
     },
-    set position([x, y]: Vec2) {
+    set position({ x, y }: Vec2) {
       // A view height of -1 keeps the current zoom.
       api.set_camera(x, y, -1)
     },
@@ -65,7 +65,7 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
       const position = api.get_camera()
       api.set_camera(position.x, position.y, view_height)
     },
-    screen_to_world(x: number, y: number): { x: number; y: number } {
+    screen_to_world(x: number, y: number): Vec2 {
       return api.screen_to_world(x, y)
     },
     follow(entity: { id: string } | undefined): void {
@@ -77,7 +77,7 @@ export function create_api(engine: MainModule, connection: ServerConnection) {
   const was_mouse_pressed = (button: MouseName): boolean => api.was_mouse_pressed(mouse_codes[button])
   const was_mouse_released = (button: MouseName): boolean => api.was_mouse_released(mouse_codes[button])
 
-  const to_vec2 = (point: { x: number; y: number } | null): Vec2 => (point ? [point.x, point.y] : [0, 0])
+  const to_vec2 = (point: Vec2 | null): Vec2 => (point ? { x: point.x, y: point.y } : { x: 0, y: 0 })
 
   const input = {
     is_down: (key: KeyName): boolean => api.is_key_down(key_codes[key]),
